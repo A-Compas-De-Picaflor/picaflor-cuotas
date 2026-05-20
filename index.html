@@ -505,6 +505,20 @@ async function sG(k){try{return localStorage.getItem(k);}catch(e){return null;}}
 async function sS(k,v){try{localStorage.setItem(k,v);return true;}catch(e){return null;}}
 async function sD(k){try{localStorage.removeItem(k);return true;}catch(e){return null;}}
 
+let aviso={texto:'',activo:false,tipo:'info'};
+async function guardarAviso(){
+  const txt=document.getElementById('av-txt');
+  const on=document.getElementById('av-on');
+  const tipo=document.getElementById('av-tipo');
+  if(txt)aviso.texto=txt.value.trim();
+  if(on)aviso.activo=on.checked;
+  if(tipo)aviso.tipo=tipo.value;
+  await sS('pf_aviso',JSON.stringify(aviso));
+  renderPanelPublico(true);
+  const m=document.getElementById('av-msg');
+  if(m){m.innerHTML='<div class="al alo">✅ Aviso guardado. Ya visible para los socios.</div>';setTimeout(()=>m.innerHTML='',3500);}
+}
+
 // ══════════════════════════════════════════════
 //  GOOGLE SHEETS — carga y sincronización
 // ══════════════════════════════════════════════
@@ -683,6 +697,7 @@ async function init(){
   if(!cfg.claveHash){cfg.claveHash=await hashPw(DEFAULT_PW);await sS('pf_cfg',JSON.stringify(cfg));}
   const sl=await sG('pf_logo');if(sl)aplLogo(sl);
   const sd=await sG('pf_datos');if(sd){try{datos=JSON.parse(sd);}catch(e){datos=[];}}
+  const sav=await sG('pf_aviso');if(sav){try{Object.assign(aviso,JSON.parse(sav));}catch(e){}}
   apTemaCSS(cfg.tema||'rojo');tSel=cfg.tema||'rojo';updHdr();rTGrid();
   // Mostrar pantalla de carga si no hay datos en cache
   renderPanelPublico(false);
@@ -735,6 +750,14 @@ function renderPanelPublico(listo){
     <div style="font-size:.77rem;color:rgba(237,224,196,.65);font-style:italic;">${cfg.sub||'Club de Cuecas'}</div>
     ${statsBadge}
   </div>
+
+  ${aviso.activo&&aviso.texto?`<div style="border-radius:12px;padding:15px 16px;margin-top:12px;border:1.5px solid ${aviso.tipo==='alerta'?'rgba(200,148,42,.4)':aviso.tipo==='festivo'?'rgba(39,174,96,.3)':'rgba(26,61,139,.25)'};background:${aviso.tipo==='alerta'?'rgba(200,148,42,.08)':aviso.tipo==='festivo'?'rgba(39,174,96,.07)':'rgba(26,61,139,.07)'};position:relative;overflow:hidden;">
+    <div style="position:absolute;top:0;left:0;bottom:0;width:4px;background:${aviso.tipo==='alerta'?'var(--O)':aviso.tipo==='festivo'?'#27ae60':'#1A3D8B'};border-radius:0;"></div>
+    <div style="padding-left:10px;">
+      <div style="font-family:var(--FD);font-size:.88rem;font-weight:700;font-style:italic;color:${aviso.tipo==='alerta'?'var(--MD)':aviso.tipo==='festivo'?'#1a6b35':'#1A3D8B'};margin-bottom:5px;">${aviso.tipo==='alerta'?'⚠️':aviso.tipo==='festivo'?'🎉':'📢'} Aviso del club</div>
+      <div style="font-size:.84rem;color:var(--T);line-height:1.65;white-space:pre-wrap;">${aviso.texto}</div>
+    </div>
+  </div>`:''}
 
   <div style="background:var(--P);border-radius:14px;padding:24px 18px 20px;margin-top:12px;border:1px solid rgba(92,58,30,.16);box-shadow:0 6px 20px rgba(44,24,16,.09);position:relative;overflow:hidden;">
     <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--R),var(--O),var(--R));"></div>
