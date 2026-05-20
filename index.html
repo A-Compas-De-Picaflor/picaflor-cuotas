@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>A Compás de Picaflor</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
 :root{--FD:"Book Antiqua",Palatino,"Palatino Linotype",Georgia,serif;
       --FL:Georgia,"Times New Roman",Times,serif;
@@ -193,8 +194,6 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
 .res-lbl{font-size:.65rem;opacity:.82;font-style:italic;margin-top:2px;}
 .diag-box{background:rgba(255,255,255,.08);border-radius:5px;padding:9px 11px;margin-top:10px;font-size:.73rem;opacity:.88;line-height:1.6;}
 .chip{font-size:.7rem;background:rgba(139,26,26,.1);color:var(--R);padding:2px 8px;border-radius:3px;font-style:italic;margin-left:6px;}
-
-/* ── COBRO ADMIN ── */
 .cobro-res-list{border-radius:6px;overflow:hidden;border:1px solid rgba(92,58,30,.16);margin-top:9px;}
 .cobro-soc-row{display:flex;justify-content:space-between;align-items:center;padding:11px 13px;cursor:pointer;background:var(--P);border-bottom:1px solid rgba(92,58,30,.07);transition:.15s;}
 .cobro-soc-row:last-child{border-bottom:none;}
@@ -229,9 +228,15 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
 .cobro-hdr{background:linear-gradient(135deg,var(--MD),var(--M));border-radius:7px;padding:13px 15px;margin-bottom:13px;display:flex;justify-content:space-between;align-items:center;}
 .cobro-hdr-nom{font-family:var(--FD);font-size:1.05rem;font-weight:900;font-style:italic;color:var(--OL);}
 .cobro-hdr-rut{font-size:.71rem;color:rgba(237,224,196,.65);font-style:italic;}
-
+/* loading */
+.loading-card{background:linear-gradient(135deg,var(--MD),var(--M));border-radius:8px;padding:22px;text-align:center;margin-top:13px;}
+.loading-ico{font-size:2.5rem;display:block;margin-bottom:8px;animation:spin 1.8s linear infinite;}
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+.loading-txt{font-family:var(--FD);font-size:1rem;font-style:italic;color:var(--OL);}
+.loading-sub{font-size:.74rem;color:rgba(237,224,196,.65);margin-top:4px;font-style:italic;}
+.sync-bar{display:flex;align-items:center;gap:9px;padding:8px 12px;background:rgba(26,61,139,.08);border:1px solid rgba(26,61,139,.18);border-radius:5px;margin-bottom:10px;flex-wrap:wrap;}
+.sync-bar span{font-size:.78rem;font-style:italic;color:#2a4a8a;flex:1;}
 @media(max-width:400px){#hdr-t{font-size:1.25rem;}.logo-w{width:60px;height:60px;}.tg2{grid-template-columns:repeat(2,1fr);}.cal-grid{grid-template-columns:repeat(3,1fr);}}
-@media print{header .hdr-s,.hdr-bot,.tabs,.ats,#panel-a,.btn,.fb,.sb2,.fh,#qi-wrap,.contact-card,.calc-box{display:none!important;}body{background:white!important;padding:0!important;}#panel-s{display:block!important;}.panel{display:block!important;padding:0!important;}}
 </style>
 </head>
 <body>
@@ -257,15 +262,7 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
 <!-- SOCIO -->
 <div class="panel active" id="panel-s">
   <div class="fh" id="fh"></div>
-  <div class="card" style="margin-top:11px;" id="qi-wrap">
-    <div class="ct">🔍 Consulta tus cuotas</div>
-    <p style="font-size:.8rem;color:var(--M);font-style:italic;margin-bottom:9px;">Ingresa los <strong>últimos 4 dígitos de tu RUT</strong>. Si termina en K, escribe <strong>0</strong>.</p>
-    <div class="ir">
-      <input type="tel" id="qi" placeholder="Ej: 5784" maxlength="4" pattern="[0-9]*" onkeydown="if(event.key==='Enter')buscar()"/>
-      <button class="btn br" onclick="buscar()">Buscar</button>
-    </div>
-    <div id="res"></div>
-  </div>
+  <div id="pub-content"></div>
 </div>
 
 <!-- ADMIN -->
@@ -290,7 +287,13 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
     </div>
 
     <!-- ESTADÍSTICAS -->
-    <div class="ap active" id="ap-stats"><div id="sc"><div class="al ali">Carga los datos del club para ver estadísticas.</div></div></div>
+    <div class="ap active" id="ap-stats">
+      <div class="sync-bar">
+        <span id="sync-admin-msg">Datos sincronizados con Google Sheets</span>
+        <button class="btn baz sm" onclick="sincronizarAdmin()">🔄 Sincronizar ahora</button>
+      </div>
+      <div id="sc"><div class="al ali">Cargando datos del club…</div></div>
+    </div>
 
     <!-- DATOS -->
     <div class="ap" id="ap-datos">
@@ -304,34 +307,19 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
           </div>
         </div>
       </div>
-      <div class="card">
-        <div class="ct" style="color:var(--R);">📂 Cargar Excel de Socios</div>
-        <label class="uz"><input type="file" accept=".xlsx,.xls,.csv" onchange="cExcel(this)"/><span class="ui">📊</span><p>Toca aquí para subir el archivo</p><span>Formatos: .xlsx · .xls · .csv</span></label>
-        <div id="ups"></div>
-        <div class="fb2">
-          <strong>📋 Formato recomendado (matricial):</strong>
-          <code>N_Socio | Nombre | Enero | Febrero | … | Diciembre</code>
-          <div class="ref-grid">
-            <div class="ref-card ref-p"><span class="ref-tit">✅ CUOTA PAGADA</span>Pagado · Pago · P<br>Si · Sí · OK · 1 · ✓<br>Cancelado</div>
-            <div class="ref-card ref-i"><span class="ref-tit">❌ CUOTA IMPAGA</span>Impago · Impaga · X<br>No · N · I · 0 · -<br>Pendiente · (vacío mes pasado)</div>
-          </div>
-          <div class="ref-grid">
-            <div class="ref-card ref-na"><span class="ref-tit">⚪ NO APLICA</span>NA · N/A · NoAplica<br>Receso · Exento · Eximido<br>No Corresponde · NC</div>
-            <div class="ref-card" style="background:rgba(92,58,30,.05);border:1px solid rgba(92,58,30,.15);color:var(--M);font-size:.74rem;padding:9px 11px;border-radius:5px;"><span class="ref-tit" style="font-weight:700;display:block;margin-bottom:3px;">💡 Flexibilidad total</span>Usa <strong>NA</strong> en cualquier celda que no corresponda cobro. El socio verá <em>"No Aplica"</em> y <strong>no se contará como deuda</strong>.</div>
-          </div>
-        </div>
+      <div class="card az" style="margin-bottom:12px;">
+        <div class="ct" style="color:#1A3D8B;">🔗 Fuente de datos: Google Sheets</div>
+        <p style="font-size:.82rem;color:#2a4a8a;margin-bottom:11px;font-style:italic;line-height:1.6;">Los datos se cargan automáticamente desde tu hoja de Google Sheets. Para actualizar los datos, edita la hoja y presiona <strong>Sincronizar</strong>.</p>
+        <button class="btn baz" onclick="sincronizarAdmin()">🔄 Sincronizar Google Sheets</button>
+        <div id="sync-datos-msg" style="margin-top:8px;"></div>
       </div>
       <div id="res-banner" style="display:none;"></div>
       <div class="card" id="dcard" style="display:none;">
-        <div class="ct">📋 Datos cargados <span class="chip" id="tchip"></span></div>
+        <div class="ct">📋 Datos actuales <span class="chip" id="tchip"></span></div>
         <div class="fb">
           <select id="fp" onchange="rTabla()"><option value="">Todos los períodos</option></select>
           <select id="fe" onchange="rTabla()"><option value="">Todos los estados</option><option value="impago">Solo Impagas</option><option value="pagado">Solo Pagadas</option><option value="na">Solo No Aplica</option></select>
           <select id="fs" onchange="rTabla()"><option value="">Sin ordenar</option><option value="deuda">Mayor deuda primero</option><option value="nombre">Por nombre A-Z</option></select>
-        </div>
-        <div class="sb2">
-          <button class="btn bm sm" onclick="guardar()">💾 Guardar</button>
-          <button class="btn bgr sm" onclick="confirmarBorrar()">🗑️ Borrar todo</button>
         </div>
         <div id="smsg"></div>
         <div class="tw" id="atbl"></div>
@@ -342,14 +330,12 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
     <div class="ap" id="ap-cobro">
       <div class="card">
         <div class="ct">🔍 Buscar Socio para Cobrar</div>
-        <p style="font-size:.8rem;color:var(--M);font-style:italic;margin-bottom:10px;">Busca por nombre o por los últimos 4 dígitos del RUT.</p>
         <div class="ir" style="margin-bottom:0;">
-          <input type="text" id="cobro-q" placeholder="Nombre del socio o últimos 4 dígitos del RUT..." oninput="buscarSocioAdmin()" autocomplete="off"/>
-          <button class="btn bgr sm" onclick="limpiarCobro()" title="Limpiar búsqueda">✕</button>
+          <input type="text" id="cobro-q" placeholder="Nombre o últimos 4 dígitos del RUT…" oninput="buscarSocioAdmin()" autocomplete="off"/>
+          <button class="btn bgr sm" onclick="limpiarCobro()" title="Limpiar">✕</button>
         </div>
         <div id="cobro-lista"></div>
       </div>
-
       <div id="cobro-panel" style="display:none;">
         <div class="card m" style="padding-bottom:18px;">
           <div class="cobro-hdr" id="cobro-hdr">
@@ -359,10 +345,8 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
             </div>
             <div id="cobro-sem-badge"></div>
           </div>
-
-          <div class="sl2">☑️ Cuotas pendientes de pago</div>
+          <div class="sl2">☑️ Cuotas pendientes</div>
           <div class="cuota-list" id="cobro-cuotas"></div>
-
           <div class="cobro-total-bar">
             <div>
               <div class="cbt-lbl">Total a cobrar</div>
@@ -370,7 +354,6 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
             </div>
             <div class="cbt-val" id="cobro-total">$ 0</div>
           </div>
-
           <div class="ig">
             <label class="il">Forma de pago</label>
             <select id="cobro-metodo">
@@ -380,10 +363,7 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
               <option value="Cheque">📋 Cheque</option>
             </select>
           </div>
-
-          <button class="btn bg" id="cobro-btn" onclick="registrarPagoMultiple()" style="width:100%;padding:13px;font-size:.95rem;margin-top:5px;">
-            ✅ Registrar Pago y Emitir Comprobante
-          </button>
+          <button class="btn bg" id="cobro-btn" onclick="registrarPagoMultiple()" style="width:100%;padding:13px;font-size:.95rem;margin-top:5px;">✅ Registrar Pago y Emitir Comprobante</button>
           <div id="cobro-msg" style="margin-top:8px;"></div>
         </div>
       </div>
@@ -404,7 +384,7 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
             <span class="copy-feedback" id="wam-fb">✅ Copiado al portapapeles</span>
           </div>
         </div>
-        <div id="waempty" class="al ali" style="margin-top:9px;">Carga los datos del club para usar esta función.</div>
+        <div id="waempty" class="al ali" style="margin-top:9px;display:none;">Cargando socios…</div>
       </div>
       <div class="card m">
         <div class="ct">📥 Lista de deudores (CSV)</div>
@@ -419,13 +399,13 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
       <div class="card m">
         <div class="ct">🏛️ Datos del Club</div>
         <div class="ig"><label class="il">Nombre del Club</label><input type="text" id="cn" placeholder="Nombre del club"/></div>
-        <div class="ig"><label class="il">Subtítulo</label><input type="text" id="cs" placeholder="Club de Cuecas — Deportivo..."/></div>
+        <div class="ig"><label class="il">Subtítulo</label><input type="text" id="cs" placeholder="Club de Cuecas — Deportivo…"/></div>
         <div class="ig"><label class="il">Lema</label><input type="text" id="cl" placeholder="Fundado en la Tradición Chilena"/></div>
         <div class="ig"><label class="il">Dirección</label><input type="text" id="cd" placeholder="Dirección del club"/></div>
         <div class="ig"><label class="il">Teléfono general</label><input type="tel" id="ct2" placeholder="+56 9 1234 5678"/></div>
         <div class="ig"><label class="il">💬 Número de contacto Tesorería</label><input type="tel" id="ctes" placeholder="+56912345678"/></div>
-        <div class="ig"><label class="il">📧 Correo electrónico del club</label><input type="email" id="ccorreo" placeholder="tesoreria@mipicaflor.cl"/></div>
-        <div class="ig"><label class="il">🏦 Datos bancarios para transferencia</label><input type="text" id="cbco" placeholder="Ej: Banco Estado · Cta Cte 123456789 · RUT 12.345.678-9"/></div>
+        <div class="ig"><label class="il">📧 Correo electrónico</label><input type="email" id="ccorreo" placeholder="tesoreria@mipicaflor.cl"/></div>
+        <div class="ig"><label class="il">🏦 Datos bancarios para transferencia</label><input type="text" id="cbco" placeholder="Banco Estado · Cta Cte 123456789 · RUT…"/></div>
         <div class="ig"><label class="il">💰 Valor cuota mensual ($)</label><input type="number" id="cvc" placeholder="5000" min="1" step="500"/></div>
         <button class="btn bm" onclick="gCfg()" style="margin-top:5px;">💾 Guardar configuración</button>
         <div id="cfgmsg"></div>
@@ -433,14 +413,14 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
       <div class="card">
         <div class="ct">🎨 Paleta de Colores</div>
         <div class="tg2" id="tgrid"></div>
-        <button class="btn br sm" onclick="apTema()">✅ Aplicar tema seleccionado</button>
+        <button class="btn br sm" onclick="apTema()">✅ Aplicar tema</button>
         <div id="temamsg"></div>
       </div>
       <div class="card" style="border-color:rgba(139,26,26,.18);">
         <div class="ct" style="color:var(--R);">🔑 Cambiar contraseña</div>
-        <div class="ig"><label class="il">Contraseña actual</label><input type="password" id="pa" placeholder="Contraseña actual"/></div>
-        <div class="ig"><label class="il">Nueva contraseña</label><input type="password" id="pn" placeholder="Nueva contraseña (mín. 6 caracteres)"/></div>
-        <div class="ig"><label class="il">Confirmar nueva</label><input type="password" id="pc" placeholder="Repite la nueva contraseña"/></div>
+        <div class="ig"><label class="il">Contraseña actual</label><input type="password" id="pa"/></div>
+        <div class="ig"><label class="il">Nueva contraseña</label><input type="password" id="pn" placeholder="Mín. 6 caracteres"/></div>
+        <div class="ig"><label class="il">Confirmar nueva</label><input type="password" id="pc"/></div>
         <button class="btn br sm" onclick="camPw()">🔑 Cambiar contraseña</button>
         <div id="pwmsg"></div>
       </div>
@@ -448,7 +428,7 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
   </div>
 </div>
 
-<!-- MODAL PAGO INDIVIDUAL -->
+<!-- MODALES -->
 <div class="modal-ov" id="modal" onclick="if(event.target===this)cerrarModal()">
   <div class="modal-box">
     <div class="modal-tit">💳 Registrar Pago de Cuota</div>
@@ -459,11 +439,9 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
     </div>
     <div class="radio-g">
       <label class="radio-o"><input type="radio" name="fpm" value="Efectivo" checked/>
-        <div><div class="ro-l">💵 Efectivo</div><div class="ro-d">Pago en mano al tesorero/a</div></div>
-      </label>
+        <div><div class="ro-l">💵 Efectivo</div><div class="ro-d">Pago en mano al tesorero/a</div></div></label>
       <label class="radio-o"><input type="radio" name="fpm" value="Transferencia"/>
-        <div><div class="ro-l">🏦 Transferencia bancaria</div><div class="ro-d">Pago electrónico</div></div>
-      </label>
+        <div><div class="ro-l">🏦 Transferencia bancaria</div><div class="ro-d">Pago electrónico</div></div></label>
     </div>
     <div class="modal-btns">
       <button class="btn bg" style="flex:1;" onclick="confirmarPago()">✅ Confirmar pago</button>
@@ -472,22 +450,20 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
   </div>
 </div>
 
-<!-- MODAL BORRAR -->
 <div class="modal-ov" id="modal-del" onclick="if(event.target===this)document.getElementById('modal-del').classList.remove('open')">
   <div class="modal-box">
     <div class="modal-tit" style="color:var(--R);">🗑️ Confirmar eliminación</div>
     <div class="modal-info" style="border-color:var(--R);">
-      <strong style="color:var(--R);">¿Borrar todos los datos?</strong><br>
-      Esta acción eliminará <span id="del-count">todos los registros</span> y no se puede deshacer.
+      <strong style="color:var(--R);">¿Borrar todos los datos locales?</strong><br>
+      Los datos de Google Sheets se volverán a cargar automáticamente.
     </div>
     <div class="modal-btns">
-      <button class="btn br" style="flex:1;" onclick="borrar()">🗑️ Sí, borrar todo</button>
+      <button class="btn br" style="flex:1;" onclick="borrar()">🗑️ Sí, borrar caché local</button>
       <button class="btn bgr sm" onclick="document.getElementById('modal-del').classList.remove('open')">Cancelar</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL COMPROBANTE -->
 <div class="modal-ov" id="modal-voucher" onclick="if(event.target===this)document.getElementById('modal-voucher').classList.remove('open')">
   <div class="modal-box" style="max-width:400px;">
     <div class="modal-tit">🧾 Comprobante de Pago</div>
@@ -502,54 +478,92 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
 
 <script>
 // ══════════════════════════════════════════════
+//  GOOGLE SHEETS — URLs de las hojas publicadas
+// ══════════════════════════════════════════════
+const SHEET_URLS=[
+  {url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-Z0c9TccRuXf6xDQRjP7a7ji5GMVm3Qw7tFhALaU8fO-wBNbcNWTZRgul4VxHm4wTQ8sSC7YC4drS/pub?gid=1404454514&single=true&output=csv',anio:2025},
+  {url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-Z0c9TccRuXf6xDQRjP7a7ji5GMVm3Qw7tFhALaU8fO-wBNbcNWTZRgul4VxHm4wTQ8sSC7YC4drS/pub?gid=0&single=true&output=csv',anio:2026}
+];
+
+// ══════════════════════════════════════════════
 //  ESTADO GLOBAL
 // ══════════════════════════════════════════════
-let datos=[], cfg={
-  nombre:'A Compás de Picaflor',
-  sub:'Club de Cuecas — Deportivo — Social — Cultural y Recreativo',
-  lema:'Fundado en la Tradición Chilena',
-  dir:'',tel:'',telTes:'',correo:'',banco:'',claveHash:'',tema:'rojo',valorCuota:5000
-};
-let tSel='rojo', pendingPayIdx=null, lastVoucherText='', cobroNS=null;
+let datos=[],sheetsLoaded=false,cobroNS=null,pendingPayIdx=null,lastVoucherText='',tSel='rojo';
+let cfg={nombre:'A Compás de Picaflor',sub:'Club de Cuecas — Deportivo — Social — Cultural y Recreativo',lema:'Fundado en la Tradición Chilena',dir:'',tel:'',telTes:'',correo:'',banco:'',claveHash:'',tema:'rojo',valorCuota:5000};
 const DEFAULT_PW='picaflor2025';
 const MESC=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const MES_ABR=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const MA=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-const HOY=new Date(), HY=HOY.getFullYear(), HM=HOY.getMonth();
-
-const TEMAS={
-  rojo:{R:'#8B1A1A',RL:'#B02525',M:'#5C3A1E',MD:'#3A2210',O:'#C8942A',OL:'#E8B84B',label:'Rojo Tradicional'},
-  azul:{R:'#1A3D8B',RL:'#2550B0',M:'#1E3A5C',MD:'#102235',O:'#C8942A',OL:'#E8B84B',label:'Azul Marino'},
-  verde:{R:'#1A6B2A',RL:'#228B36',M:'#2A5C1E',MD:'#183510',O:'#C8942A',OL:'#E8B84B',label:'Verde Campaña'},
-  cafe:{R:'#6B3A1A',RL:'#8B4A25',M:'#3A2A1E',MD:'#221810',O:'#C8942A',OL:'#E8B84B',label:'Café Andino'}
-};
+const HOY=new Date(),HY=HOY.getFullYear(),HM=HOY.getMonth();
+const TEMAS={rojo:{R:'#8B1A1A',RL:'#B02525',M:'#5C3A1E',MD:'#3A2210',O:'#C8942A',OL:'#E8B84B',label:'Rojo Tradicional'},azul:{R:'#1A3D8B',RL:'#2550B0',M:'#1E3A5C',MD:'#102235',O:'#C8942A',OL:'#E8B84B',label:'Azul Marino'},verde:{R:'#1A6B2A',RL:'#228B36',M:'#2A5C1E',MD:'#183510',O:'#C8942A',OL:'#E8B84B',label:'Verde Campaña'},cafe:{R:'#6B3A1A',RL:'#8B4A25',M:'#3A2A1E',MD:'#221810',O:'#C8942A',OL:'#E8B84B',label:'Café Andino'}};
 
 // ══════════════════════════════════════════════
-//  STORAGE
+//  STORAGE (localStorage)
 // ══════════════════════════════════════════════
 async function sG(k){try{return localStorage.getItem(k);}catch(e){return null;}}
-async function sS(k,v){try{localStorage.setItem(k,v);return true;}catch(e){console.error('Storage:',k,e);return null;}}
+async function sS(k,v){try{localStorage.setItem(k,v);return true;}catch(e){return null;}}
 async function sD(k){try{localStorage.removeItem(k);return true;}catch(e){return null;}}
 
-async function hashPw(pw){
-  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pw));
-  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+// ══════════════════════════════════════════════
+//  GOOGLE SHEETS — carga y sincronización
+// ══════════════════════════════════════════════
+async function cargarDesdeSheets(silencioso=false){
+  let nuevos=[],err=0;
+  for(const s of SHEET_URLS){
+    try{
+      const r=await fetch(s.url);
+      if(!r.ok)throw new Error(r.status);
+      const txt=await r.text();
+      const res=Papa.parse(txt,{header:true,skipEmptyLines:true,transformHeader:h=>h.trim()});
+      res.data.forEach(row=>{
+        const ks=Object.keys(row);
+        const nsK=ks.find(k=>/n.?socio|rut|numero|^socio$|^id$/i.test(k.replace(/[\s_]/g,'')));
+        const nomK=ks.find(k=>/^nombre|^name/i.test(k.trim()));
+        const ns=nsK?String(row[nsK]??'').trim():'';
+        const nom=nomK?String(row[nomK]??'').trim():'';
+        if(!ns||ns==='-'||ns==='--'||ns==='N_Socio')return;
+        MESC.forEach((mes,idx)=>{
+          const mesK=ks.find(k=>k.trim()===mes);if(!mesK)return;
+          const val=String(row[mesK]??'').trim();
+          const ne=normEst(val);
+          let est;
+          if(ne!==null){est=ne;}
+          else{const ep=(s.anio<HY)||(s.anio===HY&&idx<=HM);est=ep?'Impago':null;}
+          if(est===null)return;
+          nuevos.push({n_socio:ns,nombre:nom,anio:s.anio,periodo:`${mes} ${s.anio}`,estado:est});
+        });
+      });
+    }catch(e){console.error('Sheet',s.anio,e);err++;}
+  }
+  sheetsLoaded=true;
+  if(nuevos.length){
+    const pri={pagado:3,noapli:2,impago:1,sd:0};
+    const dm2={};
+    // Preservar pagos registrados localmente en la app
+    const loc=datos.filter(d=>d.formaPago);
+    [...nuevos,...loc].forEach(d=>{
+      const k=`${d.n_socio}|${d.periodo}`;
+      if(!dm2[k]||(pri[tipoE(d.estado)]||0)>(pri[tipoE(dm2[k].estado)]||0))dm2[k]=d;
+    });
+    datos=Object.values(dm2);
+    await guardarSilencioso();
+  }
+  return{n:nuevos.length,err};
 }
 
-// ══════════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════════
-async function init(){
-  document.getElementById('fh').textContent=`Consulta al ${HOY.getDate()} de ${MESC[HM]} de ${HY}`;
-  const sc=await sG('pf_cfg');
-  if(sc){try{Object.assign(cfg,JSON.parse(sc));}catch(e){}}
-  if(!cfg.claveHash){cfg.claveHash=await hashPw(cfg.clave||DEFAULT_PW);delete cfg.clave;await sS('pf_cfg',JSON.stringify(cfg));}
-  const sl=await sG('pf_logo');if(sl)aplLogo(sl);
-  const sd=await sG('pf_datos');if(sd){try{datos=JSON.parse(sd);}catch(e){datos=[];}}
-  apTemaCSS(cfg.tema||'rojo');tSel=cfg.tema||'rojo';updHdr();rTGrid();
+async function sincronizarAdmin(){
+  const m1=document.getElementById('sync-admin-msg');
+  const m2=document.getElementById('sync-datos-msg');
+  if(m1)m1.textContent='⏳ Sincronizando…';
+  if(m2)m2.innerHTML='<div class="al ali">⏳ Sincronizando con Google Sheets…</div>';
+  const{n,err}=await cargarDesdeSheets(true);
+  rTabla();rStats();mostrarResBanner();
+  const nS=[...new Set(datos.map(d=>d.n_socio))].length;
+  const msg=err===SHEET_URLS.length?'❌ Sin conexión — verifica tu red':n>0?`✅ ${nS} socios cargados — última sync: ${HOY.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})}`:'✅ Sin cambios';
+  if(m1){m1.textContent=msg;}
+  if(m2){m2.innerHTML=err===SHEET_URLS.length?'<div class="al ale">❌ No se pudo conectar con Google Sheets.</div>':'<div class="al alo">'+msg+'</div>';setTimeout(()=>m2.innerHTML='',5000);}
 }
-init();
 
 // ══════════════════════════════════════════════
 //  HELPERS
@@ -565,34 +579,24 @@ function pPer(s,fallbackAnio){
 function getPer(d){return pPer(d.periodo,d.anio);}
 function pLabel(d){const p=getPer(d);return p?`${MESC[p.mes]} ${p.anio}`:(d.periodo||'—');}
 function esPas(p){if(!p)return false;return(p.anio<HY)||(p.anio===HY&&p.mes<=HM);}
-function fmt(m){if(m===undefined||m===null)return '—';const n=parseFloat(String(m).replace(/[^0-9.-]/g,''));return isNaN(n)?String(m):'$ '+n.toLocaleString('es-CL');}
+function fmt(m){if(m===undefined||m===null)return'—';const n=parseFloat(String(m).replace(/[^0-9.-]/g,''));return isNaN(n)?String(m):'$ '+n.toLocaleString('es-CL');}
 function vc(){return Number(cfg.valorCuota)||5000;}
-
 function tipoE(e){
-  // Limpia espacios, barras, guiones Y puntos para normalizar "N.A.", "n/a", "#N/A", etc.
   const s=(e||'').toLowerCase().trim().replace(/[\s\/\-\.]/g,'');
-  if(!s)return 'sd';
-  if(s==='na'||s==='#na'||s==='noapli'||s.startsWith('noaplic')||s==='nc'||s==='nocorresponde'||s==='receso'||s==='exento'||s==='eximido'||s==='anterior'||s==='cortesia')return 'noapli';
-  if(s.startsWith('pag')||s.startsWith('cancel')||s==='si'||s==='sí'||s==='ok'||s==='✓'||s==='✔'||s==='true'||s==='1'||s==='p')return 'pagado';
-  if(s.startsWith('imp')||s==='i'||s==='no'||s==='n'||s==='x'||s==='-'||s==='0'||s==='false'||s==='pendiente'||s==='debe')return 'impago';
-  return 'sd';
+  if(!s)return'sd';
+  if(s==='na'||s==='#na'||s.startsWith('noaplic')||s==='nc'||s==='nocorresponde'||s==='receso'||s==='exento'||s==='eximido')return'noapli';
+  if(s.startsWith('pag')||s.startsWith('cancel')||s==='si'||s==='sí'||s==='ok'||s==='✓'||s==='true'||s==='1'||s==='p')return'pagado';
+  if(s.startsWith('imp')||s==='i'||s==='no'||s==='n'||s==='x'||s==='-'||s==='0'||s==='false'||s==='pendiente'||s==='debe')return'impago';
+  return'sd';
 }
 function normEst(val){
   const v=String(val??'').trim();if(!v)return null;
   const t=tipoE(v);
-  if(t==='noapli')return 'NoAplica';if(t==='pagado')return 'Pagado';if(t==='impago')return 'Impago';
+  if(t==='noapli')return'NoAplica';if(t==='pagado')return'Pagado';if(t==='impago')return'Impago';
   return null;
 }
-function esImpagoPasado(d){
-  if(tipoE(d.estado)==='pagado'||tipoE(d.estado)==='noapli')return false;
-  return esPas(getPer(d));
-}
-
-function getSem(n){
-  if(n===0)return{cls:'sem-v',ico:'🟢',txt:'Al día'};
-  if(n<=2)return{cls:'sem-a',ico:'🟡',txt:'Mora leve'};
-  return{cls:'sem-r',ico:'🔴',txt:'Moroso/a'};
-}
+function esImpagoPasado(d){if(tipoE(d.estado)==='pagado'||tipoE(d.estado)==='noapli')return false;return esPas(getPer(d));}
+function getSem(n){if(n===0)return{cls:'sem-v',ico:'🟢',txt:'Al día'};if(n<=2)return{cls:'sem-a',ico:'🟡',txt:'Mora leve'};return{cls:'sem-r',ico:'🔴',txt:'Moroso/a'};}
 
 // ══════════════════════════════════════════════
 //  LOGO
@@ -629,10 +633,7 @@ function rTGrid(){
     g.appendChild(d);
   });
 }
-async function apTema(){
-  cfg.tema=tSel;await sS('pf_cfg',JSON.stringify(cfg));
-  const m=document.getElementById('temamsg');m.innerHTML='<div class="al alo">✅ Tema aplicado.</div>';setTimeout(()=>m.innerHTML='',3000);
-}
+async function apTema(){cfg.tema=tSel;await sS('pf_cfg',JSON.stringify(cfg));const m=document.getElementById('temamsg');m.innerHTML='<div class="al alo">✅ Tema aplicado.</div>';setTimeout(()=>m.innerHTML='',3000);}
 
 // ══════════════════════════════════════════════
 //  TABS
@@ -649,23 +650,18 @@ function showAt(t,btn){
   if(t==='stats')rStats();
   if(t==='datos'&&datos.length){document.getElementById('dcard').style.display='block';rTabla();mostrarResBanner();}
   if(t==='cobro')initCobro();
-  if(t==='comun'){pobWA();if(datos.length)document.getElementById('waempty').style.display='none';}
+  if(t==='comun')pobWA();
   if(t==='cfg'){pCfgForm();rTGrid();}
 }
 
 // ══════════════════════════════════════════════
 //  AUTH
 // ══════════════════════════════════════════════
+async function hashPw(pw){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pw));return[...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');}
 async function login(){
   const hash=await hashPw(document.getElementById('pwi').value);
-  if(hash===cfg.claveHash){
-    document.getElementById('alock').style.display='none';
-    document.getElementById('apanel').style.display='block';
-    if(datos.length)rTabla();rStats();
-  }else{
-    document.getElementById('pwe').innerHTML='<div class="al ale">❌ Contraseña incorrecta</div>';
-    document.getElementById('pwi').value='';
-  }
+  if(hash===cfg.claveHash){document.getElementById('alock').style.display='none';document.getElementById('apanel').style.display='block';if(datos.length)rTabla();rStats();}
+  else{document.getElementById('pwe').innerHTML='<div class="al ale">❌ Contraseña incorrecta</div>';document.getElementById('pwi').value='';}
 }
 async function camPw(){
   const m=document.getElementById('pwmsg');
@@ -674,23 +670,59 @@ async function camPw(){
   const n=document.getElementById('pn').value,c=document.getElementById('pc').value;
   if(n.length<6){m.innerHTML='<div class="al ale">❌ Mínimo 6 caracteres.</div>';return;}
   if(n!==c){m.innerHTML='<div class="al ale">❌ Las contraseñas no coinciden.</div>';return;}
-  cfg.claveHash=await hashPw(n);delete cfg.clave;await sS('pf_cfg',JSON.stringify(cfg));
-  m.innerHTML='<div class="al alo">✅ Contraseña cambiada.</div>';
-  ['pa','pn','pc'].forEach(id=>document.getElementById(id).value='');setTimeout(()=>m.innerHTML='',4000);
+  cfg.claveHash=await hashPw(n);await sS('pf_cfg',JSON.stringify(cfg));
+  m.innerHTML='<div class="al alo">✅ Contraseña cambiada.</div>';['pa','pn','pc'].forEach(id=>document.getElementById(id).value='');setTimeout(()=>m.innerHTML='',4000);
+}
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+async function init(){
+  document.getElementById('fh').textContent=`Consulta al ${HOY.getDate()} de ${MESC[HM]} de ${HY}`;
+  const sc=await sG('pf_cfg');if(sc){try{Object.assign(cfg,JSON.parse(sc));}catch(e){}}
+  if(!cfg.claveHash){cfg.claveHash=await hashPw(DEFAULT_PW);await sS('pf_cfg',JSON.stringify(cfg));}
+  const sl=await sG('pf_logo');if(sl)aplLogo(sl);
+  const sd=await sG('pf_datos');if(sd){try{datos=JSON.parse(sd);}catch(e){datos=[];}}
+  apTemaCSS(cfg.tema||'rojo');tSel=cfg.tema||'rojo';updHdr();rTGrid();
+  // Mostrar pantalla de carga si no hay datos en cache
+  renderPanelPublico(false);
+  // Cargar desde Google Sheets
+  cargarDesdeSheets(datos.length>0).then(({n,err})=>{
+    renderPanelPublico(true);
+    if(n>0)rStats();
+  });
+}
+init();
+
+// ══════════════════════════════════════════════
+//  PANEL PÚBLICO
+// ══════════════════════════════════════════════
+function renderPanelPublico(listo){
+  const c=document.getElementById('pub-content');
+  if(!listo&&!datos.length){
+    c.innerHTML=`<div class="loading-card"><span class="loading-ico">🪗</span><div class="loading-txt">Cargando datos del club…</div><div class="loading-sub">Conectando con Google Sheets</div></div>`;
+    return;
+  }
+  c.innerHTML=`<div class="card" id="qi-wrap">
+    <div class="ct">🔍 Consulta tus cuotas</div>
+    <p style="font-size:.8rem;color:var(--M);font-style:italic;margin-bottom:9px;">Ingresa los <strong>últimos 4 dígitos de tu RUT</strong>. Si termina en K, escribe <strong>0</strong>.</p>
+    <div class="ir">
+      <input type="tel" id="qi" placeholder="Ej: 5784" maxlength="4" pattern="[0-9]*" onkeydown="if(event.key==='Enter')buscar()"/>
+      <button class="btn br" onclick="buscar()">Buscar</button>
+    </div>
+    <div id="res"></div>
+  </div>`;
 }
 
 // ══════════════════════════════════════════════
 //  CONFETI
 // ══════════════════════════════════════════════
 function lanzarConfeti(){
-  const cv=document.createElement('canvas');
-  cv.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;';
+  const cv=document.createElement('canvas');cv.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;';
   document.body.appendChild(cv);cv.width=window.innerWidth;cv.height=window.innerHeight;
-  const ctx=cv.getContext('2d');
-  const cols=['#C8942A','#8B1A1A','#27ae60','#3498db','#f39c12','#E8B84B'];
+  const ctx=cv.getContext('2d');const cols=['#C8942A','#8B1A1A','#27ae60','#3498db','#f39c12','#E8B84B'];
   const ps=Array.from({length:120},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height-cv.height,r:Math.random()*5+3,spd:Math.random()*3.5+1.5,col:cols[Math.floor(Math.random()*cols.length)],ang:Math.random()*Math.PI*2,rot:0,rotSpd:(Math.random()-.5)*.12}));
-  let fr=0;
-  const tick=()=>{try{if(++fr>210){document.body.removeChild(cv);return;}ctx.clearRect(0,0,cv.width,cv.height);ps.forEach(p=>{p.y+=p.spd;p.x+=Math.sin(fr*.05+p.ang)*1.8;p.rot+=p.rotSpd;if(p.y>cv.height){p.y=-10;p.x=Math.random()*cv.width;}ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.fillStyle=p.col;ctx.fillRect(-p.r,-p.r*.5,p.r*2,p.r);ctx.restore();});requestAnimationFrame(tick);}catch(e){try{document.body.removeChild(cv);}catch(_){}}};
+  let fr=0;const tick=()=>{try{if(++fr>210){document.body.removeChild(cv);return;}ctx.clearRect(0,0,cv.width,cv.height);ps.forEach(p=>{p.y+=p.spd;p.x+=Math.sin(fr*.05+p.ang)*1.8;p.rot+=p.rotSpd;if(p.y>cv.height){p.y=-10;p.x=Math.random()*cv.width;}ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.fillStyle=p.col;ctx.fillRect(-p.r,-p.r*.5,p.r*2,p.r);ctx.restore();});requestAnimationFrame(tick);}catch(e){try{document.body.removeChild(cv);}catch(_){}}};
   requestAnimationFrame(tick);setTimeout(()=>{try{document.body.removeChild(cv);}catch(_){}},8000);
 }
 
@@ -698,13 +730,12 @@ function lanzarConfeti(){
 //  CALENDARIO
 // ══════════════════════════════════════════════
 function renderCalAnio(regs,anio){
-  const esAct=anio===HY;
-  let h='<div class="cal-grid">';
+  const esAct=anio===HY;let h='<div class="cal-grid">';
   for(let m=0;m<=11;m++){
     const rec=regs.find(d=>{const p=getPer(d);return p&&p.mes===m&&p.anio===anio;});
     const cur=esAct&&m===HM,esFut=esAct&&m>HM;
     let ico,cls,lbl;
-    if(!rec){ico=esFut?'·':'·';cls=esFut?'cal-fut':'cal-sd';lbl=esFut?'Futuro':'S/D';}
+    if(!rec){ico='·';cls=esFut?'cal-fut':'cal-sd';lbl=esFut?'Futuro':'S/D';}
     else{const t=tipoE(rec.estado);if(t==='pagado'){ico='✅';cls='cal-pag';lbl='Pagada';}else if(t==='noapli'){ico='⚪';cls='cal-na';lbl='No Aplica';}else if(esFut){ico='·';cls='cal-fut';lbl='Futuro';}else{ico='⚠️';cls='cal-imp';lbl='Pendiente';}}
     h+=`<div class="cal-m ${cls}${cur?' cal-cur':''}"><span class="cal-ico">${ico}</span><span class="cal-mes">${MA[m]}</span><span class="cal-lbl">${lbl}</span></div>`;
   }
@@ -716,7 +747,9 @@ function renderCalAnio(regs,anio){
 // ══════════════════════════════════════════════
 function buscar(){
   const res=document.getElementById('res');
-  const q=document.getElementById('qi').value.trim().replace(/[^0-9]/g,'');
+  if(!res)return;
+  if(!sheetsLoaded&&!datos.length){res.innerHTML='<div class="al ali">⏳ Aún cargando datos, espera un momento e inténtalo de nuevo.</div>';return;}
+  const q=(document.getElementById('qi').value||'').trim().replace(/[^0-9]/g,'');
   if(q.length<4){res.innerHTML='<div class="al ale">⚠️ Ingresa exactamente los últimos 4 dígitos de tu RUT.</div>';return;}
   if(!datos.length){res.innerHTML='<div class="al ale">ℹ️ Datos no disponibles. Contacta al administrador del club.</div>';return;}
   const regs=datos.filter(d=>u4(d.n_socio)===q.slice(-4));
@@ -778,19 +811,11 @@ function verificarSocio(ns){
   const msg=document.getElementById('ver-msg');
   const ingresado=(inp?.value||'').trim().replace(/[^0-9]/g,'');
   if(ingresado.length<4){msg.innerHTML='<div class="al ale">⚠️ Ingresa exactamente los primeros 4 dígitos.</div>';return;}
-  const rutNorm=nRut(ns);
-  const primeros4=rutNorm.slice(0,4);
-  if(ingresado!==primeros4){
+  if(ingresado!==nRut(ns).slice(0,4)){
     msg.innerHTML='<div class="al ale">❌ Los dígitos no coinciden. Intenta nuevamente.</div>';
     inp.value='';inp.focus();return;
   }
-  const regs=datos.filter(d=>d.n_socio===ns);
-  mostrarRes(regs);
-}
-
-function selSocioPublico(ns){
-  const regs=datos.filter(d=>d.n_socio===ns);
-  mostrarRes(regs);
+  mostrarRes(datos.filter(d=>d.n_socio===ns));
 }
 
 function mostrarRes(regs){
@@ -798,7 +823,6 @@ function mostrarRes(regs){
   const nombre=regs[0].nombre,rut4=u4(regs[0].n_socio);
   const impagas=regs.filter(d=>esImpagoPasado(d));
   const pagadas=regs.filter(d=>tipoE(d.estado)==='pagado');
-  const noAplica=regs.filter(d=>tipoE(d.estado)==='noapli');
   const sem=getSem(impagas.length);
   const totalD=impagas.length*vc();
   const anios=[...new Set(regs.map(d=>{const p=getPer(d);return p?p.anio:null;}).filter(Boolean))].sort((a,b)=>b-a);
@@ -830,11 +854,11 @@ function mostrarRes(regs){
     const pct=mVig>0?Math.round((pagAnio.length/mVig)*100):0;
     const progColor=pct===100?'linear-gradient(90deg,#27ae60,#2ecc71)':pct>=50?'linear-gradient(90deg,#f0ad00,#f5c842)':'linear-gradient(90deg,var(--R),var(--RL))';
     h+=`<div class="yr-head"><span class="yr-anio">📅 ${anio}${esAct?' <span style="font-size:.63rem;opacity:.55;font-weight:400;">(en curso)</span>':''}</span><span class="yr-badge">${impAnio.length>0?`⚠️ ${impAnio.length} impaga${impAnio.length>1?'s':''}`:pagAnio.length>0?'✅ Sin deuda':'—'}</span></div>
-    <div class="yr-prog-l"><span>Pagadas ${anio}</span><span>${pagAnio.length}/${mVig} cuotas — ${pct}%</span></div>
+    <div class="yr-prog-l"><span>Pagadas ${anio}</span><span>${pagAnio.length}/${mVig} — ${pct}%</span></div>
     <div class="yr-prog-w"><div class="yr-prog-b" style="width:${pct}%;background:${progColor};"></div></div>`;
     h+=renderCalAnio(regsAnio,anio);
     if(impAnio.length>0){h+=`<div class="dvig"><div class="dvig-tit">⚠️ Deuda vigente ${anio}</div>`;impAnio.sort((a,b)=>{const pa=getPer(a),pb=getPer(b);return(pa&&pb)?pa.mes-pb.mes:0;}).forEach(d=>{h+=`<div class="cr imp"><span class="crp">📅 ${pLabel(d)}</span><span style="display:flex;align-items:center;gap:7px;"><span class="crm">${fmt(vc())}</span><span class="tag ti">Impago</span></span></div>`;});h+='</div>';}
-    if(naAnio.length>0){h+=`<div style="background:rgba(150,150,150,.05);border:1px solid rgba(150,150,150,.18);border-radius:5px;margin-bottom:9px;overflow:hidden;"><div style="font-size:.71rem;font-weight:700;font-style:italic;color:#888;padding:5px 12px 4px;background:rgba(150,150,150,.08);border-bottom:1px solid rgba(150,150,150,.12);">⚪ Meses No Aplica ${anio}</div>`;naAnio.forEach(d=>{h+=`<div class="cr na"><span class="crp" style="color:#888;">📅 ${pLabel(d)}</span><span class="tag tna2">No Aplica</span></div>`;});h+='</div>';}
+    if(naAnio.length>0){h+=`<div style="background:rgba(150,150,150,.05);border:1px solid rgba(150,150,150,.18);border-radius:5px;margin-bottom:9px;overflow:hidden;"><div style="font-size:.71rem;font-weight:700;font-style:italic;color:#888;padding:5px 12px 4px;">⚪ Meses No Aplica ${anio}</div>`;naAnio.forEach(d=>{h+=`<div class="cr na"><span class="crp" style="color:#888;">📅 ${pLabel(d)}</span><span class="tag tna2">No Aplica</span></div>`;});h+='</div>';}
   });
 
   if(pagadas.length){
@@ -844,8 +868,8 @@ function mostrarRes(regs){
   }
 
   if(cfg.correo||cfg.telTes){
-    const msgContacto=`Estimado/a equipo de ${cfg.nombre||'el club'},\n\nMi nombre es ${nombre} y mi RUT termina en ···${rut4}.\n\n${impagas.length>0?`Quisiera regularizar ${impagas.length} cuota${impagas.length>1?'s impagas':' impaga'} (${fmt(totalD)}). ¿Cuándo y cómo puedo efectuar el pago?`:'Tengo una consulta sobre mi estado de cuenta.'}\n\nSaludos cordiales,\n${nombre}`;
-    h+=`<div class="contact-card"><div class="ct" style="color:#1A3D8B;">💬 Contactar al club</div><p style="font-size:.8rem;color:#2a4a8a;margin-bottom:9px;font-style:italic;">Copia el mensaje y pégalo en tu app preferida.</p><div class="msg-preview" id="contact-preview">${msgContacto}</div><div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;"><button class="btn bcp sm" onclick="copiarMsg(this,'contact-preview','contact-fb')">📋 Copiar mensaje</button><span class="copy-feedback" id="contact-fb">✅ Copiado</span></div>${cfg.correo?`<p style="font-size:.72rem;color:#5a7ab0;font-style:italic;margin-top:7px;">📧 ${cfg.correo}</p>`:''}</div>`;
+    const msgC=`Estimado/a equipo de ${cfg.nombre||'el club'},\n\nMi nombre es ${nombre} y mi RUT termina en ···${rut4}.\n\n${impagas.length>0?`Quisiera regularizar ${impagas.length} cuota${impagas.length>1?'s impagas':' impaga'} (${fmt(totalD)}). ¿Cuándo y cómo puedo efectuar el pago?`:'Tengo una consulta sobre mi estado de cuenta.'}\n\nSaludos cordiales,\n${nombre}`;
+    h+=`<div class="contact-card"><div class="ct" style="color:#1A3D8B;">💬 Contactar al club</div><div class="msg-preview" id="contact-preview">${msgC}</div><div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;"><button class="btn bcp sm" onclick="copiarMsg(this,'contact-preview','contact-fb')">📋 Copiar mensaje</button><span class="copy-feedback" id="contact-fb">✅ Copiado</span></div>${cfg.correo?`<p style="font-size:.72rem;color:#5a7ab0;font-style:italic;margin-top:7px;">📧 ${cfg.correo}</p>`:''}</div>`;
   }
 
   if(!impagas.length){
@@ -858,129 +882,13 @@ function mostrarRes(regs){
 }
 
 function copiarBanco(btn){navigator.clipboard.writeText(cfg.banco||'').then(()=>{btn.textContent='✅ ¡Copiado!';setTimeout(()=>btn.textContent='📋 Copiar datos bancarios',2500);});}
-function copiarMsg(btn,srcId,fbId){const el=document.getElementById(srcId);const txt=el?el.textContent:'';navigator.clipboard.writeText(txt).then(()=>{const fb=document.getElementById(fbId);if(fb){fb.classList.add('show');setTimeout(()=>fb.classList.remove('show'),2500);}});}
-
-// ══════════════════════════════════════════════
-//  PARSER EXCEL
-// ══════════════════════════════════════════════
-function getMesIdx(header){
-  const h=header.toLowerCase().trim();
-  for(let i=0;i<MES.length;i++)if(h.includes(MES[i]))return i;
-  for(let i=0;i<MES_ABR.length;i++){if(h===MES_ABR[i]||h.startsWith(MES_ABR[i]+' ')||h.startsWith(MES_ABR[i]+'.'))return i;}
-  return -1;
-}
-function gVal(row,names){
-  const ks=Object.keys(row);
-  for(const n of names){const k=ks.find(k=>k.toLowerCase().replace(/[_\s\-\.°º]/g,'').includes(n));if(k!==undefined&&String(row[k]).trim())return String(row[k]).trim();}
-  return '';
-}
-async function cExcel(inp){
-  const f=inp.files[0];if(!f)return;
-  const st=document.getElementById('ups');st.innerHTML='<div class="al ali">⏳ Procesando archivo…</div>';
-  document.getElementById('res-banner').style.display='none';datos=[];
-  const r=new FileReader();
-  r.onload=async e=>{
-    try{
-      const wb=XLSX.read(e.target.result,{type:'binary'});const lineas=[];
-      wb.SheetNames.forEach(sn=>{
-        const ws=wb.Sheets[sn];        let rows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false});
-        if(!rows.length){lineas.push(`⚪ Hoja <strong>"${sn}"</strong>: vacía.`);return;}
-        const aH=parseInt(sn);const anio=(!isNaN(aH)&&aH>2000&&aH<2100)?aH:HY;
-        const allKeys=Object.keys(rows[0]);const monthCols={};
-        allKeys.forEach(k=>{const idx=getMesIdx(k);if(idx!==-1)monthCols[k]=idx;});
-        let count=0,countNA=0;
-        if(Object.keys(monthCols).length>0){
-          // Detectar columna de RUT/Socio que puede llamarse con el año (ej: "2026")
-          const yrHdrCol=allKeys.find(k=>/^\d{4}$/.test(k)&&+k>2000&&+k<2100);
-          // Primera columna no-mes, no-nombre, no-vacía (fallback genérico)
-          const idFallbackCol=allKeys.find(k=>getMesIdx(k)===-1&&!k.startsWith('__')&&!/^\d{4}$/.test(k)&&!['nomb','name','descr'].some(p=>k.toLowerCase().includes(p)));
-          rows.forEach(row=>{
-            // 1) Campo con nombre estándar
-            let ns=gVal(row,['nsocio','rut','nrut','rutcontribuyente','socio','numero','num','id','nro','n°','nro°','cod','cedula','ficha','afiliado','n_socio']);
-            // 2) Columna con nombre de año (ej: "2026" como encabezado de RUT)
-            if(!ns&&yrHdrCol)ns=String(row[yrHdrCol]??'').trim();
-            // 3) Primera columna no-mes como último recurso
-            if(!ns&&idFallbackCol)ns=String(row[idFallbackCol]??'').trim();
-            const nom=gVal(row,['nombre','name','apellidos','apellido','nombresapellidos','nombrecompleto','razonsocial']);
-            if(!ns)return;
-            Object.entries(monthCols).forEach(([col,mesIdx])=>{
-              const rawVal=String(row[col]??'').trim();const normE=normEst(rawVal);
-              let estado;
-              if(normE!==null){estado=normE;}else{const esPasado=(anio<HY)||(anio===HY&&mesIdx<=HM);estado=esPasado?'Impago':null;}
-              if(estado===null)return;if(estado==='NoAplica')countNA++;
-              datos.push({n_socio:ns,nombre:nom,anio,periodo:`${MESC[mesIdx]} ${anio}`,estado});count++;
-            });
-          });
-          lineas.push(`✅ Hoja <strong>"${sn}"</strong> (${anio}): <strong>${count} registros</strong>${countNA>0?` · <em>${countNA} "No Aplica"</em>`:''}`);
-        }else{
-          rows.forEach(row=>{
-            const ns=gVal(row,['nsocio','rut','nrut','socio','numero','num','id','nro','n°','cod']);
-            const nom=gVal(row,['nombre','name','apellidos','apellido']);
-            const per=gVal(row,['periodo','mes','cuota','fecha','month','period']);
-            const rawEstStr=gVal(row,['estado','status','pagado','pago','payment']);
-            const estNorm=normEst(rawEstStr);
-            let est;if(estNorm!==null){est=estNorm;}else{const pTmp=pPer(per,anio);est=esPas(pTmp)?'Impago':null;if(est===null)return;}
-            if(!ns)return;
-            datos.push({n_socio:ns,nombre:nom,anio,periodo:per||`${MESC[HM]} ${anio}`,estado:est});count++;
-          });
-          lineas.push(`⚠️ Hoja <strong>"${sn}"</strong> (lineal): ${count} registros`);
-        }
-      });
-      // ── Deduplicar por (socio + período): Pagado > NoAplica > Impago ──
-      if(datos.length){
-        const pri={pagado:3,noapli:2,impago:1,sd:0};
-        const dm2={};
-        datos.forEach(d=>{
-          const k=`${d.n_socio}|${d.periodo}`;
-          if(!dm2[k]||(pri[tipoE(d.estado)]||0)>(pri[tipoE(dm2[k].estado)]||0))dm2[k]=d;
-        });
-        datos=Object.values(dm2);
-      }
-      if(!datos.length){
-        let dbg='<div class="al ale">❌ No se encontraron registros válidos.</div>';
-        try{
-          const wb2=XLSX.read(e.target.result,{type:'binary'});
-          const ws2=wb2.Sheets[wb2.SheetNames[0]];
-          const rows2=XLSX.utils.sheet_to_json(ws2,{defval:''});
-          if(rows2.length){
-            const ks=Object.keys(rows2[0]);
-            const mKeys=ks.filter(k=>getMesIdx(k)!==-1);
-            const primerFila=JSON.stringify(rows2[0]).substring(0,300);
-            dbg+=`<div class="fb2" style="margin-top:7px;"><strong>🔍 Diagnóstico automático (primera hoja):</strong><br>
-              Columnas encontradas: <code>${ks.join(' | ')}</code><br>
-              Columnas de meses reconocidas: <code>${mKeys.length?mKeys.join(', '):'⚠️ Ninguna — verifica que los meses estén como texto (ej: "Enero") o número (1–12)'}</code><br>
-              Filas en el archivo: <strong>${rows2.length}</strong><br><br>
-              <strong>Primera fila de datos:</strong><br><code>${primerFila}</code><br><br>
-              💡 Comparte esta información para ajustar el parser a tu formato.
-            </div>`;
-          }
-        }catch(_){}
-        document.getElementById('ups').innerHTML=dbg;return;
-      }
-      const nSocios=[...new Set(datos.map(d=>d.n_socio).filter(Boolean))].length;
-      const nImp=datos.filter(d=>esImpagoPasado(d)).length;
-      const nPag=datos.filter(d=>tipoE(d.estado)==='pagado').length;
-      const nNA=datos.filter(d=>tipoE(d.estado)==='noapli').length;
-      document.getElementById('ups').innerHTML=`<div class="al alo">✅ <strong>${nSocios} socios</strong> · <strong>${nPag} pagadas</strong> · <strong>${nImp} impagas</strong>${nNA>0?` · <strong>${nNA} No Aplica</strong>`:''}</div><div class="fb2" style="margin-top:6px;">${lineas.join('<br>')}</div>`;
-      mostrarResBannerCompleto(nSocios,nPag,nImp,nNA);
-      document.getElementById('dcard').style.display='block';
-      rTabla();rStats();await guardarSilencioso();
-      setTimeout(()=>document.getElementById('res-banner').scrollIntoView({behavior:'smooth',block:'start'}),150);
-    }catch(ex){document.getElementById('ups').innerHTML=`<div class="al ale">❌ Error al procesar: ${ex.message}</div>`;}
-  };
-  r.readAsBinaryString(f);
-}
+function copiarMsg(btn,srcId,fbId){const el=document.getElementById(srcId);navigator.clipboard.writeText(el?el.textContent:'').then(()=>{const fb=document.getElementById(fbId);if(fb){fb.classList.add('show');setTimeout(()=>fb.classList.remove('show'),2500);}});}
 
 // ══════════════════════════════════════════════
 //  GUARDAR
 // ══════════════════════════════════════════════
-async function guardarSilencioso(){const r=await sS('pf_datos',JSON.stringify(datos));if(!r)console.warn('Auto-guardado falló.');}
-async function guardar(){
-  const m=document.getElementById('smsg');m.innerHTML='<div class="al ali">⏳ Guardando…</div>';
-  const r=await sS('pf_datos',JSON.stringify(datos));
-  m.innerHTML=r?'<div class="al alo">✅ Guardado correctamente.</div>':'<div class="al ale">❌ Error al guardar.</div>';
-  setTimeout(()=>m.innerHTML='',4000);
-}
+async function guardarSilencioso(){await sS('pf_datos',JSON.stringify(datos));}
+async function borrar(){document.getElementById('modal-del').classList.remove('open');await sD('pf_datos');datos=[];document.getElementById('dcard').style.display='none';document.getElementById('res-banner').style.display='none';await sincronizarAdmin();}
 function mostrarResBannerCompleto(nS,nP,nI,nNA){
   document.getElementById('res-banner').innerHTML=`<div class="res-banner"><div class="res-banner-t">📊 Resumen de datos cargados</div><div class="res-grid"><div class="res-item"><div class="res-num">${nS}</div><div class="res-lbl">Socios</div></div><div class="res-item"><div class="res-num">${datos.length}</div><div class="res-lbl">Registros</div></div><div class="res-item"><div class="res-num">${nP}</div><div class="res-lbl">Pagadas</div></div><div class="res-item"><div class="res-num" style="color:#ffcdd2;">${nI}</div><div class="res-lbl">Impagas</div></div></div>${nNA>0?`<div class="diag-box">⚪ ${nNA} registros "No Aplica"</div>`:''}</div>`;
   document.getElementById('res-banner').style.display='block';
@@ -990,23 +898,12 @@ function mostrarResBanner(){
   const nS=[...new Set(datos.map(d=>d.n_socio).filter(Boolean))].length;
   mostrarResBannerCompleto(nS,datos.filter(d=>tipoE(d.estado)==='pagado').length,datos.filter(d=>esImpagoPasado(d)).length,datos.filter(d=>tipoE(d.estado)==='noapli').length);
 }
-function confirmarBorrar(){
-  document.getElementById('del-count').textContent=`${datos.length} registros de ${[...new Set(datos.map(d=>d.n_socio))].length} socios`;
-  document.getElementById('modal-del').classList.add('open');
-}
-async function borrar(){
-  document.getElementById('modal-del').classList.remove('open');await sD('pf_datos');datos=[];
-  document.getElementById('dcard').style.display='none';document.getElementById('res-banner').style.display='none';
-  document.getElementById('ups').innerHTML='<div class="al ali">🗑️ Datos eliminados.</div>';rStats();
-}
+function confirmarBorrar(){document.getElementById('modal-del').classList.add('open');}
 
 // ══════════════════════════════════════════════
 //  TABLA ADMIN
 // ══════════════════════════════════════════════
-function dMap(){
-  const m={};[...new Set(datos.map(d=>d.n_socio))].forEach(ns=>m[ns]=0);
-  datos.forEach(d=>{if(esImpagoPasado(d))m[d.n_socio]++;});return m;
-}
+function dMap(){const m={};[...new Set(datos.map(d=>d.n_socio))].forEach(ns=>m[ns]=0);datos.forEach(d=>{if(esImpagoPasado(d))m[d.n_socio]++;});return m;}
 function rTabla(){
   if(!datos.length)return;
   document.getElementById('dcard').style.display='block';
@@ -1018,10 +915,7 @@ function rTabla(){
   const fEst=document.getElementById('fe').value,fPer=fp.value,fSort=document.getElementById('fs').value;
   let f=datos.filter(d=>{
     if(fPer&&pLabel(d)!==fPer)return false;
-    if(fEst==='impago')return esImpagoPasado(d);
-    if(fEst==='pagado')return tipoE(d.estado)==='pagado';
-    if(fEst==='na')return tipoE(d.estado)==='noapli';
-    return true;
+    if(fEst==='impago')return esImpagoPasado(d);if(fEst==='pagado')return tipoE(d.estado)==='pagado';if(fEst==='na')return tipoE(d.estado)==='noapli';return true;
   });
   const dm=dMap();
   if(fSort==='deuda')f.sort((a,b)=>(dm[b.n_socio]||0)-(dm[a.n_socio]||0));
@@ -1031,7 +925,7 @@ function rTabla(){
     const esImp=esImpagoPasado(d),t=tipoE(d.estado);const idx=datos.indexOf(d);const sem=getSem(dm[d.n_socio]||0);
     const cls=esImp?'tr':t==='pagado'?'tg2c':t==='noapli'?'tna':'to';
     const estadoLabel=t==='noapli'?'⚪ No Aplica':d.estado||'—';
-    h+=`<tr><td title="${d.n_socio}">···${u4(d.n_socio)}</td><td>${d.nombre||'—'}</td><td>${pLabel(d)}</td><td class="${cls}">${estadoLabel}${d.formaPago?`<br><span style="font-size:.65rem;color:#888;">${d.formaPago}</span>`:''}</td><td title="${sem.txt}">${sem.ico}</td><td>${esImp?`<button class="btn bg xs" onclick="showPayModal(${idx})">✅ Pagado</button>`:'<span class="to" style="font-size:.7rem;">—</span>'}</td></tr>`;
+    h+=`<tr><td>···${u4(d.n_socio)}</td><td>${d.nombre||'—'}</td><td>${pLabel(d)}</td><td class="${cls}">${estadoLabel}${d.formaPago?`<br><span style="font-size:.65rem;color:#888;">${d.formaPago}</span>`:''}</td><td>${sem.ico}</td><td>${esImp?`<button class="btn bg xs" onclick="showPayModal(${idx})">✅ Pagado</button>`:'<span class="to" style="font-size:.7rem;">—</span>'}</td></tr>`;
   });
   document.getElementById('atbl').innerHTML=h+'</tbody></table>';
 }
@@ -1039,272 +933,103 @@ function rTabla(){
 // ══════════════════════════════════════════════
 //  MODAL PAGO INDIVIDUAL
 // ══════════════════════════════════════════════
-function showPayModal(idx){
-  pendingPayIdx=idx;const d=datos[idx];
-  document.getElementById('mi-nom').textContent=d.nombre;
-  document.getElementById('mi-per').textContent=pLabel(d);
-  document.getElementById('mi-mto').textContent=fmt(vc());
-  document.getElementById('modal').classList.add('open');
-}
+function showPayModal(idx){pendingPayIdx=idx;const d=datos[idx];document.getElementById('mi-nom').textContent=d.nombre;document.getElementById('mi-per').textContent=pLabel(d);document.getElementById('mi-mto').textContent=fmt(vc());document.getElementById('modal').classList.add('open');}
 function cerrarModal(){document.getElementById('modal').classList.remove('open');pendingPayIdx=null;}
 async function confirmarPago(){
   if(pendingPayIdx===null)return;
   const method=document.querySelector('input[name="fpm"]:checked').value;
-  const d=datos[pendingPayIdx];
-  d.estado='Pagado';d.formaPago=method;d.fechaPago=HOY.toLocaleDateString('es-CL');
-  cerrarModal();await guardar();
-  mostrarVoucherCobro([d],method);
-  rTabla();rStats();mostrarResBanner();
-  document.getElementById('smsg').innerHTML='<div class="al alo">✅ Pago registrado.</div>';
-  setTimeout(()=>document.getElementById('smsg').innerHTML='',5000);
+  const d=datos[pendingPayIdx];d.estado='Pagado';d.formaPago=method;d.fechaPago=HOY.toLocaleDateString('es-CL');
+  cerrarModal();await guardarSilencioso();mostrarVoucherCobro([d],method);rTabla();rStats();mostrarResBanner();
+  document.getElementById('smsg').innerHTML='<div class="al alo">✅ Pago registrado.</div>';setTimeout(()=>document.getElementById('smsg').innerHTML='',5000);
 }
 
 // ══════════════════════════════════════════════
-//  COBRO ADMIN — BÚSQUEDA Y SELECCIÓN
+//  COBRO ADMIN
 // ══════════════════════════════════════════════
-function initCobro(){
-  cobroNS=null;
-  document.getElementById('cobro-q').value='';
-  document.getElementById('cobro-lista').innerHTML='';
-  document.getElementById('cobro-panel').style.display='none';
-  document.getElementById('cobro-msg').innerHTML='';
-  if(!datos.length)document.getElementById('cobro-lista').innerHTML='<div class="al ali" style="margin-top:9px;">Carga los datos del club para usar esta función.</div>';
-}
-
-function limpiarCobro(){
-  document.getElementById('cobro-q').value='';
-  document.getElementById('cobro-lista').innerHTML='';
-  document.getElementById('cobro-panel').style.display='none';
-  cobroNS=null;
-}
-
+function initCobro(){cobroNS=null;document.getElementById('cobro-q').value='';document.getElementById('cobro-lista').innerHTML='';document.getElementById('cobro-panel').style.display='none';}
+function limpiarCobro(){document.getElementById('cobro-q').value='';document.getElementById('cobro-lista').innerHTML='';document.getElementById('cobro-panel').style.display='none';cobroNS=null;}
 function buscarSocioAdmin(){
   const q=document.getElementById('cobro-q').value.trim().toLowerCase();
   const lista=document.getElementById('cobro-lista');
   if(!q||!datos.length){lista.innerHTML='';return;}
-
   const socios=[...new Set(datos.map(d=>d.n_socio).filter(Boolean))];
   const dm=dMap();
   const norm=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const qn=norm(q);
-  const matches=socios.filter(ns=>{
-    const d=datos.find(x=>x.n_socio===ns);
-    const nom=norm(d?.nombre||'');
-    const rut4=u4(ns);
-    return nom.includes(qn)||rut4.includes(q);
-  }).slice(0,10);
-
+  const matches=socios.filter(ns=>{const d=datos.find(x=>x.n_socio===ns);return norm(d?.nombre||'').includes(qn)||u4(ns).includes(q);}).slice(0,10);
   if(!matches.length){lista.innerHTML='<div class="al ale" style="margin-top:9px;">No se encontraron socios.</div>';return;}
-
   let h='<div class="cobro-res-list">';
   matches.forEach(ns=>{
-    const d=datos.find(x=>x.n_socio===ns);
-    const nom=d?.nombre||ns,imp=dm[ns]||0;
-    const isSel=cobroNS===ns;
-    h+=`<div class="cobro-soc-row${isSel?' csel':''}" onclick="selSocioAdmin('${ns}')">
-      <div>
-        <div class="cobro-soc-nom">${nom}</div>
-        <div class="cobro-soc-det">RUT ···${u4(ns)} · ${imp>0?`${imp} cuota${imp>1?'s':''} impaga${imp>1?'s':''}`:'Sin deuda'}</div>
-      </div>
-      <span class="cobro-soc-badge ${imp>0?'cbr':'cbg'}">${imp>0?`⚠️ ${imp} imp.`:'✅ Al día'}</span>
-    </div>`;
+    const d=datos.find(x=>x.n_socio===ns);const nom=d?.nombre||ns,imp=dm[ns]||0;const isSel=cobroNS===ns;
+    h+=`<div class="cobro-soc-row${isSel?' csel':''}" onclick="selSocioAdmin('${ns}')"><div><div class="cobro-soc-nom">${nom}</div><div class="cobro-soc-det">RUT ···${u4(ns)} · ${imp>0?`${imp} cuota${imp>1?'s':''} impaga${imp>1?'s':''}`:'Sin deuda'}</div></div><span class="cobro-soc-badge ${imp>0?'cbr':'cbg'}">${imp>0?`⚠️ ${imp} imp.`:'✅ Al día'}</span></div>`;
   });
   lista.innerHTML=h+'</div>';
 }
-
 function selSocioAdmin(ns){
-  cobroNS=ns;
-  buscarSocioAdmin(); // refresca el highlight de selección
-
-  const regs=datos.filter(d=>d.n_socio===ns);
-  const nom=regs[0]?.nombre||ns;
-  const imp=regs.filter(d=>esImpagoPasado(d));
-  const sem=getSem(dMap()[ns]||0);
-
-  document.getElementById('cobro-nombre').textContent=nom;
-  document.getElementById('cobro-rut4').textContent=`RUT ···${u4(ns)}`;
+  cobroNS=ns;buscarSocioAdmin();
+  const regs=datos.filter(d=>d.n_socio===ns);const nom=regs[0]?.nombre||ns;const sem=getSem(dMap()[ns]||0);
+  document.getElementById('cobro-nombre').textContent=nom;document.getElementById('cobro-rut4').textContent=`RUT ···${u4(ns)}`;
   document.getElementById('cobro-sem-badge').innerHTML=`<span class="semaforo ${sem.cls}" style="font-size:.73rem;padding:4px 10px;">${sem.ico} ${sem.txt}</span>`;
-
-  renderCobroCuotas(ns);
-  document.getElementById('cobro-panel').style.display='block';
-  document.getElementById('cobro-msg').innerHTML='';
+  renderCobroCuotas(ns);document.getElementById('cobro-panel').style.display='block';document.getElementById('cobro-msg').innerHTML='';
   setTimeout(()=>document.getElementById('cobro-panel').scrollIntoView({behavior:'smooth',block:'start'}),120);
 }
-
 function renderCobroCuotas(ns){
   const imp=datos.filter(d=>d.n_socio===ns&&esImpagoPasado(d));
   imp.sort((a,b)=>{const pa=getPer(a),pb=getPer(b);if(!pa||!pb)return 0;return pa.anio!==pb.anio?pa.anio-pb.anio:pa.mes-pb.mes;});
-
   const el=document.getElementById('cobro-cuotas'),btn=document.getElementById('cobro-btn');
-  if(!imp.length){
-    el.innerHTML='<div class="cobro-empty"><span>🎉</span>Este socio no tiene cuotas pendientes.</div>';
-    btn.disabled=true;btn.style.opacity='.4';updTotalCobro();return;
-  }
+  if(!imp.length){el.innerHTML='<div class="cobro-empty"><span>🎉</span>Este socio no tiene cuotas pendientes.</div>';btn.disabled=true;btn.style.opacity='.4';updTotalCobro();return;}
   btn.disabled=false;btn.style.opacity='1';
-
-  let h=`<div class="sel-all-row" onclick="toggleTodasCobro()">
-    <input type="checkbox" id="chk-all-cobro" checked/>
-    <span>Seleccionar todas (${imp.length} cuota${imp.length>1?'s':''})</span>
-  </div>`;
-  imp.forEach(d=>{
-    const idx=datos.indexOf(d);
-    h+=`<div class="cuota-row cq-sel" onclick="toggleCuotaRow(this)">
-      <input type="checkbox" class="chk-cuota" data-idx="${idx}" checked/>
-      <span class="cuota-mes">📅 ${pLabel(d)}</span>
-      <span class="cuota-mto">${fmt(vc())}</span>
-    </div>`;
-  });
-  el.innerHTML=h;
-  updTotalCobro();
+  let h=`<div class="sel-all-row" onclick="toggleTodasCobro()"><input type="checkbox" id="chk-all-cobro" checked/><span>Seleccionar todas (${imp.length} cuota${imp.length>1?'s':''})</span></div>`;
+  imp.forEach(d=>{const idx=datos.indexOf(d);h+=`<div class="cuota-row cq-sel" onclick="toggleCuotaRow(this)"><input type="checkbox" class="chk-cuota" data-idx="${idx}" checked/><span class="cuota-mes">📅 ${pLabel(d)}</span><span class="cuota-mto">${fmt(vc())}</span></div>`;});
+  el.innerHTML=h;updTotalCobro();
 }
-
-function toggleCuotaRow(row){
-  const chk=row.querySelector('input[type=checkbox]');
-  if(!chk)return;
-  chk.checked=!chk.checked;
-  row.classList.toggle('cq-sel',chk.checked);
-  syncSelAll();updTotalCobro();
-}
-
-function toggleTodasCobro(){
-  const chkAll=document.getElementById('chk-all-cobro');
-  chkAll.checked=!chkAll.checked;
-  document.querySelectorAll('.chk-cuota').forEach(c=>{
-    c.checked=chkAll.checked;
-    c.closest('.cuota-row').classList.toggle('cq-sel',chkAll.checked);
-  });
-  updTotalCobro();
-}
-
-function syncSelAll(){
-  const chks=[...document.querySelectorAll('.chk-cuota')];
-  const chkAll=document.getElementById('chk-all-cobro');
-  if(chkAll)chkAll.checked=chks.length>0&&chks.every(c=>c.checked);
-}
-
-function updTotalCobro(){
-  const sel=[...document.querySelectorAll('.chk-cuota:checked')];
-  const total=sel.length*vc();
-  const el=document.getElementById('cobro-total');
-  const sub=document.getElementById('cobro-ncuotas');
-  if(el)el.textContent=`$ ${total.toLocaleString('es-CL')}`;
-  if(sub)sub.textContent=`${sel.length} cuota${sel.length!==1?'s':''} seleccionada${sel.length!==1?'s':''}`;
-}
-
+function toggleCuotaRow(row){const chk=row.querySelector('input[type=checkbox]');if(!chk)return;chk.checked=!chk.checked;row.classList.toggle('cq-sel',chk.checked);syncSelAll();updTotalCobro();}
+function toggleTodasCobro(){const chkAll=document.getElementById('chk-all-cobro');chkAll.checked=!chkAll.checked;document.querySelectorAll('.chk-cuota').forEach(c=>{c.checked=chkAll.checked;c.closest('.cuota-row').classList.toggle('cq-sel',chkAll.checked);});updTotalCobro();}
+function syncSelAll(){const chks=[...document.querySelectorAll('.chk-cuota')];const chkAll=document.getElementById('chk-all-cobro');if(chkAll)chkAll.checked=chks.length>0&&chks.every(c=>c.checked);}
+function updTotalCobro(){const sel=[...document.querySelectorAll('.chk-cuota:checked')];const total=sel.length*vc();const el=document.getElementById('cobro-total');const sub=document.getElementById('cobro-ncuotas');if(el)el.textContent=`$ ${total.toLocaleString('es-CL')}`;if(sub)sub.textContent=`${sel.length} cuota${sel.length!==1?'s':''} seleccionada${sel.length!==1?'s':''}`;}
 async function registrarPagoMultiple(){
   const sel=[...document.querySelectorAll('.chk-cuota:checked')];
   if(!sel.length){document.getElementById('cobro-msg').innerHTML='<div class="al ale">⚠️ Selecciona al menos una cuota.</div>';return;}
-
   const metodo=document.getElementById('cobro-metodo').value;
-  const hoy=HOY.toLocaleDateString('es-CL');
-  const cuotasPagadas=[];
-
-  sel.forEach(chk=>{
-    const idx=parseInt(chk.dataset.idx);
-    datos[idx].estado='Pagado';datos[idx].formaPago=metodo;datos[idx].fechaPago=hoy;
-    cuotasPagadas.push({...datos[idx]});
-  });
-
-  await guardarSilencioso();
-  const ns=cobroNS;
-  selSocioAdmin(ns); // refresca el panel con estado actualizado
-  rTabla();rStats();mostrarResBanner();
-  document.getElementById('cobro-msg').innerHTML=`<div class="al alo">✅ ${cuotasPagadas.length} cuota${cuotasPagadas.length>1?'s registradas':'  registrada'} correctamente.</div>`;
+  const hoy=HOY.toLocaleDateString('es-CL');const cuotasPagadas=[];
+  sel.forEach(chk=>{const idx=parseInt(chk.dataset.idx);datos[idx].estado='Pagado';datos[idx].formaPago=metodo;datos[idx].fechaPago=hoy;cuotasPagadas.push({...datos[idx]});});
+  await guardarSilencioso();const ns=cobroNS;selSocioAdmin(ns);rTabla();rStats();mostrarResBanner();
+  document.getElementById('cobro-msg').innerHTML=`<div class="al alo">✅ ${cuotasPagadas.length} cuota${cuotasPagadas.length>1?'s registradas':'  registrada'}.</div>`;
   mostrarVoucherCobro(cuotasPagadas,metodo);
 }
 
 // ══════════════════════════════════════════════
-//  COMPROBANTE UNIVERSAL
+//  COMPROBANTE
 // ══════════════════════════════════════════════
 function mostrarVoucherCobro(cuotas,metodo){
-  const nom=cuotas[0]?.nombre||'—';
-  const rut4=u4(cuotas[0]?.n_socio||'');
-  const total=cuotas.length*vc();
+  const nom=cuotas[0]?.nombre||'—';const rut4=u4(cuotas[0]?.n_socio||'');const total=cuotas.length*vc();
   const num=`${HY}${String(HM+1).padStart(2,'0')}${String(HOY.getDate()).padStart(2,'0')}-${Math.floor(Math.random()*8000)+1000}`;
-  const fStr=`${HOY.getDate()} de ${MESC[HM]} de ${HY}`;
-  const metIco=metodo==='Efectivo'?'💵':metodo==='Transferencia'?'🏦':metodo==='Débito'?'💳':'📋';
-
-  // Texto plano para copiar
-  const lineas=[
-    `════════════════════════════`,
-    `  ${cfg.nombre||'Club de Cuecas'}`,
-    `  COMPROBANTE DE PAGO`,
-    `  N° ${num}`,
-    `════════════════════════════`,
-    `Fecha   : ${fStr}`,
-    `Socio   : ${nom}`,
-    `RUT     : ···${rut4}`,
-    ``,
-    `  DETALLE DE CUOTAS:`,
-    ...cuotas.map((d,i)=>`  ${String(i+1).padStart(2,'0')}. ${pLabel(d).padEnd(20)} ${fmt(vc())}`),
-    ``,
-    `────────────────────────────`,
-    `  TOTAL PAGADO : ${fmt(total)}`,
-    `  Forma de pago: ${metodo}`,
-    `────────────────────────────`,
-    `${cfg.dir||''}`
-  ];
+  const fStr=`${HOY.getDate()} de ${MESC[HM]} de ${HY}`;const metIco=metodo==='Efectivo'?'💵':metodo==='Transferencia'?'🏦':metodo==='Débito'?'💳':'📋';
+  const lineas=[`════════════════════════════`,`  ${cfg.nombre||'Club de Cuecas'}`,`  COMPROBANTE DE PAGO`,`  N° ${num}`,`════════════════════════════`,`Fecha   : ${fStr}`,`Socio   : ${nom}`,`RUT     : ···${rut4}`,``,`  DETALLE DE CUOTAS:`,...cuotas.map((d,i)=>`  ${String(i+1).padStart(2,'0')}. ${pLabel(d).padEnd(20)} ${fmt(vc())}`),``,`────────────────────────────`,`  TOTAL PAGADO : ${fmt(total)}`,`  Forma de pago: ${metodo}`,`────────────────────────────`,`${cfg.dir||''}`];
   lastVoucherText=lineas.join('\n');
-
-  // HTML del comprobante
-  let filasTabla='';
-  cuotas.forEach((d,i)=>{filasTabla+=`<tr><td style="color:#888;text-align:center;">${i+1}</td><td>${pLabel(d)}</td><td style="text-align:right;font-weight:700;color:var(--R);">${fmt(vc())}</td></tr>`;});
-
-  document.getElementById('voucher-content').innerHTML=`
-    <div style="background:#fff;border:2px solid var(--O);border-radius:8px;padding:18px;font-size:.82rem;line-height:1.75;">
-      <div style="text-align:center;border-bottom:2px solid var(--O);padding-bottom:12px;margin-bottom:14px;">
-        <div style="font-family:var(--FD);font-size:1.08rem;font-weight:900;color:var(--MD);font-style:italic;">${cfg.nombre||'Club de Cuecas'}</div>
-        <div style="font-size:.68rem;color:var(--M);font-style:italic;">${cfg.sub||''}</div>
-        <div style="display:inline-block;background:var(--R);color:white;font-weight:700;font-size:.78rem;padding:3px 12px;border-radius:3px;margin-top:6px;">COMPROBANTE DE PAGO</div>
-        <div style="font-size:.67rem;color:#999;margin-top:4px;">N° ${num} &nbsp;·&nbsp; ${fStr}</div>
-      </div>
-      <div style="background:rgba(92,58,30,.04);border-radius:5px;padding:9px 12px;margin-bottom:11px;font-size:.82rem;line-height:1.8;">
-        <div style="display:flex;justify-content:space-between;"><span style="color:var(--M);font-style:italic;">Socio</span><strong>${nom}</strong></div>
-        <div style="display:flex;justify-content:space-between;"><span style="color:var(--M);font-style:italic;">RUT</span><strong>···${rut4}</strong></div>
-      </div>
-      <table class="vou-table">
-        <thead><tr><th style="width:28px;text-align:center;">#</th><th>Período</th><th style="text-align:right;">Monto</th></tr></thead>
-        <tbody>${filasTabla}</tbody>
-      </table>
-      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px dashed rgba(92,58,30,.15);margin-top:4px;font-size:.82rem;">
-        <span style="color:var(--M);font-style:italic;">Forma de pago</span>
-        <strong>${metIco} ${metodo}</strong>
-      </div>
-      <div style="background:linear-gradient(135deg,var(--MD),var(--M));color:white;border-radius:6px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
-        <span style="font-size:.85rem;opacity:.9;">💰 Total pagado</span>
-        <span style="font-family:var(--FD);font-size:1.45rem;font-weight:900;color:var(--OL);">${fmt(total)}</span>
-      </div>
-      ${cfg.dir?`<div style="font-size:.67rem;color:#aaa;text-align:center;margin-top:9px;font-style:italic;">${cfg.dir}</div>`:''}
-    </div>`;
-  document.getElementById('modal-voucher').classList.add('open');
-  setTimeout(lanzarConfeti,300);
+  let filasTabla='';cuotas.forEach((d,i)=>{filasTabla+=`<tr><td style="color:#888;text-align:center;">${i+1}</td><td>${pLabel(d)}</td><td style="text-align:right;font-weight:700;color:var(--R);">${fmt(vc())}</td></tr>`;});
+  document.getElementById('voucher-content').innerHTML=`<div style="background:#fff;border:2px solid var(--O);border-radius:8px;padding:18px;font-size:.82rem;line-height:1.75;"><div style="text-align:center;border-bottom:2px solid var(--O);padding-bottom:12px;margin-bottom:14px;"><div style="font-family:var(--FD);font-size:1.08rem;font-weight:900;color:var(--MD);font-style:italic;">${cfg.nombre||'Club de Cuecas'}</div><div style="font-size:.68rem;color:var(--M);font-style:italic;">${cfg.sub||''}</div><div style="display:inline-block;background:var(--R);color:white;font-weight:700;font-size:.78rem;padding:3px 12px;border-radius:3px;margin-top:6px;">COMPROBANTE DE PAGO</div><div style="font-size:.67rem;color:#999;margin-top:4px;">N° ${num} &nbsp;·&nbsp; ${fStr}</div></div><div style="background:rgba(92,58,30,.04);border-radius:5px;padding:9px 12px;margin-bottom:11px;"><div style="display:flex;justify-content:space-between;"><span style="color:var(--M);font-style:italic;">Socio</span><strong>${nom}</strong></div><div style="display:flex;justify-content:space-between;"><span style="color:var(--M);font-style:italic;">RUT</span><strong>···${rut4}</strong></div></div><table class="vou-table"><thead><tr><th style="width:28px;text-align:center;">#</th><th>Período</th><th style="text-align:right;">Monto</th></tr></thead><tbody>${filasTabla}</tbody></table><div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px dashed rgba(92,58,30,.15);margin-top:4px;"><span style="color:var(--M);font-style:italic;">Forma de pago</span><strong>${metIco} ${metodo}</strong></div><div style="background:linear-gradient(135deg,var(--MD),var(--M));color:white;border-radius:6px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center;margin-top:10px;"><span style="font-size:.85rem;opacity:.9;">💰 Total pagado</span><span style="font-family:var(--FD);font-size:1.45rem;font-weight:900;color:var(--OL);">${fmt(total)}</span></div>${cfg.dir?`<div style="font-size:.67rem;color:#aaa;text-align:center;margin-top:9px;font-style:italic;">${cfg.dir}</div>`:''}</div>`;
+  document.getElementById('modal-voucher').classList.add('open');setTimeout(lanzarConfeti,300);
 }
-
-function copiarVoucher(btn){
-  navigator.clipboard.writeText(lastVoucherText).then(()=>{btn.textContent='✅ ¡Copiado!';setTimeout(()=>btn.textContent='📋 Copiar texto',2500);});
-}
+function copiarVoucher(btn){navigator.clipboard.writeText(lastVoucherText).then(()=>{btn.textContent='✅ ¡Copiado!';setTimeout(()=>btn.textContent='📋 Copiar texto',2500);});}
 
 // ══════════════════════════════════════════════
 //  ESTADÍSTICAS
 // ══════════════════════════════════════════════
 function rStats(){
-  const el=document.getElementById('sc');
-  if(!datos.length){el.innerHTML='<div class="al ali">Carga los datos del club para ver estadísticas.</div>';return;}
-  const socios=[...new Set(datos.map(d=>d.n_socio))];
-  const tot=socios.length,dm=dMap();
-  const alDia=socios.filter(ns=>dm[ns]===0).length;
-  const leve=socios.filter(ns=>dm[ns]>=1&&dm[ns]<=2).length;
-  const moroso=socios.filter(ns=>dm[ns]>=3).length;
-  const pct=Math.round(alDia/tot*100);
-  const totM=Object.values(dm).reduce((a,v)=>a+v,0)*vc();
+  const el=document.getElementById('sc');if(!el)return;
+  if(!datos.length){el.innerHTML='<div class="al ali">Cargando datos desde Google Sheets…</div>';return;}
+  const socios=[...new Set(datos.map(d=>d.n_socio))];const tot=socios.length,dm=dMap();
+  const alDia=socios.filter(ns=>dm[ns]===0).length,leve=socios.filter(ns=>dm[ns]>=1&&dm[ns]<=2).length,moroso=socios.filter(ns=>dm[ns]>=3).length;
+  const pct=Math.round(alDia/tot*100),totM=Object.values(dm).reduce((a,v)=>a+v,0)*vc();
   const nNA=datos.filter(d=>tipoE(d.estado)==='noapli').length;
   const top=socios.filter(ns=>dm[ns]>0).sort((a,b)=>dm[b]-dm[a]).slice(0,5);
   let h=`<div class="sg"><div class="sb sm2"><div class="sn">${tot}</div><div class="sl">Total socios</div></div><div class="sb sgo"><div class="sn">${pct}<span style="font-size:1.1rem;">%</span></div><div class="sl">Socios al día</div></div><div class="sb sr"><div class="sn">${tot-alDia}</div><div class="sl">Con deuda activa</div></div><div class="sb so"><div class="sn big">${fmt(totM)}</div><div class="sl">Total pendiente</div></div></div>
   ${nNA>0?`<div class="al ali" style="margin-bottom:10px;">⚪ <strong>${nNA} registros "No Aplica"</strong> excluidos del cálculo de deuda.</div>`:''}
   <div class="card" style="margin:0 0 12px;"><div class="ct">🚦 Semáforo de Morosidad</div>
-  <div class="sem-row" style="background:#e8f5e9;border-radius:5px;margin-bottom:5px;"><span>🟢 Al día <span style="font-size:.72rem;opacity:.7;">(0 cuotas)</span></span><strong>${alDia}</strong></div>
-  <div class="sem-row" style="background:#fff8e1;border-radius:5px;margin-bottom:5px;"><span>🟡 Mora leve <span style="font-size:.72rem;opacity:.7;">(1–2)</span></span><strong>${leve}</strong></div>
-  <div class="sem-row" style="background:#fde8e8;border-radius:5px;"><span>🔴 Moroso/a <span style="font-size:.72rem;opacity:.7;">(3+)</span></span><strong style="color:var(--R);">${moroso}</strong></div></div>`;
+  <div class="sem-row" style="background:#e8f5e9;border-radius:5px;margin-bottom:5px;"><span>🟢 Al día</span><strong>${alDia}</strong></div>
+  <div class="sem-row" style="background:#fff8e1;border-radius:5px;margin-bottom:5px;"><span>🟡 Mora leve (1–2)</span><strong>${leve}</strong></div>
+  <div class="sem-row" style="background:#fde8e8;border-radius:5px;"><span>🔴 Moroso/a (3+)</span><strong style="color:var(--R);">${moroso}</strong></div></div>`;
   if(moroso>0)h+=`<div class="al ale" style="margin-bottom:12px;">🚨 <strong>${moroso} socio${moroso>1?'s tienen':' tiene'} 3 o más cuotas impagas.</strong></div>`;
   if(top.length){
     h+=`<div class="card" style="margin:0;"><div class="ct">📊 Socios con mayor deuda</div><div class="tl">`;
@@ -1320,12 +1045,11 @@ function rStats(){
 function pobWA(){
   const sel=document.getElementById('was'),cur=sel.value;
   sel.innerHTML='<option value="">— Selecciona un socio —</option>';
-  if(!datos.length)return;
+  if(!datos.length){document.getElementById('waempty').style.display='block';return;}
+  document.getElementById('waempty').style.display='none';
   const dSoc={},nSoc={};
   datos.forEach(d=>{if(esImpagoPasado(d)){dSoc[d.n_socio]=dSoc[d.n_socio]||[];dSoc[d.n_socio].push(d);nSoc[d.n_socio]=d.nombre;}});
-  Object.keys(dSoc).sort((a,b)=>(nSoc[a]||'').localeCompare(nSoc[b]||'','es')).forEach(ns=>{
-    const o=document.createElement('option');o.value=ns;o.textContent=`${nSoc[ns]} (${dSoc[ns].length} cuota${dSoc[ns].length>1?'s':''})`;if(ns===cur)o.selected=true;sel.appendChild(o);
-  });
+  Object.keys(dSoc).sort((a,b)=>(nSoc[a]||'').localeCompare(nSoc[b]||'','es')).forEach(ns=>{const o=document.createElement('option');o.value=ns;o.textContent=`${nSoc[ns]} (${dSoc[ns].length} cuota${dSoc[ns].length>1?'s':''})`;if(ns===cur)o.selected=true;sel.appendChild(o);});
   if(cur)genWA();
 }
 function genWA(){
@@ -1367,7 +1091,7 @@ async function gCfg(){
   cfg.telTes=document.getElementById('ctes').value.trim();cfg.correo=document.getElementById('ccorreo').value.trim();
   cfg.banco=document.getElementById('cbco').value.trim();
   const v=parseFloat(document.getElementById('cvc').value);cfg.valorCuota=(!isNaN(v)&&v>0)?v:5000;
-  updHdr();delete cfg.clave;const r=await sS('pf_cfg',JSON.stringify(cfg));
+  updHdr();const r=await sS('pf_cfg',JSON.stringify(cfg));
   const m=document.getElementById('cfgmsg');m.innerHTML=r?'<div class="al alo">✅ Configuración guardada.</div>':'<div class="al ale">❌ Error al guardar.</div>';
   setTimeout(()=>m.innerHTML='',4000);
 }
