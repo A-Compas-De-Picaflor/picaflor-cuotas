@@ -316,10 +316,14 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
       <div id="res-banner" style="display:none;"></div>
       <div class="card" id="dcard" style="display:none;">
         <div class="ct">📋 Datos actuales <span class="chip" id="tchip"></span></div>
-        <div class="fb">
-          <select id="fp" onchange="rTabla()"><option value="">Todos los períodos</option></select>
-          <select id="fe" onchange="rTabla()"><option value="">Todos los estados</option><option value="impago">Solo Impagas</option><option value="pagado">Solo Pagadas</option><option value="na">Solo No Aplica</option></select>
-          <select id="fs" onchange="rTabla()"><option value="">Sin ordenar</option><option value="deuda">Mayor deuda primero</option><option value="nombre">Por nombre A-Z</option></select>
+        <div class="fb" style="flex-direction:column;gap:7px;">
+          <input type="text" id="fn" placeholder="🔍 Buscar por nombre de socio…" oninput="rTabla()" style="width:100%;padding:9px 12px;font-size:.83rem;border-radius:4px;"/>
+          <div style="display:flex;gap:7px;flex-wrap:wrap;">
+            <select id="fy" onchange="rTabla()" style="flex:1;min-width:80px;padding:7px 9px;font-size:.78rem;"><option value="">Todos los años</option></select>
+            <select id="fm" onchange="rTabla()" style="flex:1;min-width:100px;padding:7px 9px;font-size:.78rem;"><option value="">Todos los meses</option></select>
+            <select id="fe" onchange="rTabla()" style="flex:1;min-width:110px;padding:7px 9px;font-size:.78rem;"><option value="">Todos los estados</option><option value="impago">Solo Impagas</option><option value="pagado">Solo Pagadas</option><option value="na">Solo No Aplica</option></select>
+            <select id="fs" onchange="rTabla()" style="flex:1;min-width:100px;padding:7px 9px;font-size:.78rem;"><option value="">Sin ordenar</option><option value="deuda">Mayor deuda</option><option value="nombre">Por nombre A-Z</option></select>
+          </div>
         </div>
         <div id="smsg"></div>
         <div class="tw" id="atbl"></div>
@@ -977,20 +981,40 @@ function dMap(){const m={};[...new Set(datos.map(d=>d.n_socio))].forEach(ns=>m[n
 function rTabla(){
   if(!datos.length)return;
   document.getElementById('dcard').style.display='block';
-  document.getElementById('tchip').textContent=datos.length+' registros';
-  const periodos=[...new Set(datos.map(d=>pLabel(d)))].sort();
-  const fp=document.getElementById('fp'),curP=fp.value;
-  fp.innerHTML='<option value="">Todos los períodos</option>';
-  periodos.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;if(p===curP)o.selected=true;fp.appendChild(o);});
-  const fEst=document.getElementById('fe').value,fPer=fp.value,fSort=document.getElementById('fs').value;
-  let f=datos.filter(d=>{
-    if(fPer&&pLabel(d)!==fPer)return false;
-    if(fEst==='impago')return esImpagoPasado(d);if(fEst==='pagado')return tipoE(d.estado)==='pagado';if(fEst==='na')return tipoE(d.estado)==='noapli';return true;
-  });
+  const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const fn=norm(document.getElementById('fn')?.value||'');
+  const fyEl=document.getElementById('fy');
+  const fmEl=document.getElementById('fm');
+  const fy=fyEl?.value||'';
+  const fm=fmEl?.value||'';
+  const fEst=document.getElementById('fe')?.value||'';
+  const fSort=document.getElementById('fs')?.value||'';
+  // Poblar años dinámicamente
+  const anios=[...new Set(datos.map(d=>{const p=getPer(d);return p?p.anio:null;}).filter(Boolean))].sort((a,b)=>b-a);
+  if(fyEl){const cy=fyEl.value;fyEl.innerHTML='<option value="">Todos los años</option>';anios.forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=a;if(String(a)===cy)o.selected=true;fyEl.appendChild(o);});}
+  // Poblar meses según año seleccionado
+  if(fmEl){
+    const cm=fmEl.value;fmEl.innerHTML='<option value="">Todos los meses</option>';
+    if(fy){const meses=[...new Set(datos.filter(d=>{const p=getPer(d);return p&&String(p.anio)===fy;}).map(d=>{const p=getPer(d);return p?p.mes:null;}).filter(n=>n!==null))].sort((a,b)=>a-b);meses.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=MESC[m];if(String(m)===cm)o.selected=true;fmEl.appendChild(o);});}
+  }
+  // Aplicar filtros
   const dm=dMap();
+  let f=datos.filter(d=>{
+    if(fn&&!norm(d.nombre).includes(fn))return false;
+    const p=getPer(d);
+    if(fy&&(!p||String(p.anio)!==fy))return false;
+    if(fm&&(!p||String(p.mes)!==fm))return false;
+    if(fEst==='impago')return esImpagoPasado(d);
+    if(fEst==='pagado')return tipoE(d.estado)==='pagado';
+    if(fEst==='na')return tipoE(d.estado)==='noapli';
+    return true;
+  });
   if(fSort==='deuda')f.sort((a,b)=>(dm[b.n_socio]||0)-(dm[a.n_socio]||0));
   else if(fSort==='nombre')f.sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'));
+  // Render
+  document.getElementById('tchip').textContent=`${f.length} / ${datos.length} registros`;
   let h=`<table><thead><tr><th>RUT</th><th>Nombre</th><th>Período</th><th>Estado</th><th></th><th>Acción</th></tr></thead><tbody>`;
+  if(!f.length){h+=`<tr><td colspan="6" style="text-align:center;padding:20px;font-style:italic;color:var(--M);font-size:.82rem;">Sin resultados para los filtros aplicados</td></tr>`;}
   f.forEach(d=>{
     const esImp=esImpagoPasado(d),t=tipoE(d.estado);const idx=datos.indexOf(d);const sem=getSem(dm[d.n_socio]||0);
     const cls=esImp?'tr':t==='pagado'?'tg2c':t==='noapli'?'tna':'to';
