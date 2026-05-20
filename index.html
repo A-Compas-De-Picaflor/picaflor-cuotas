@@ -700,18 +700,65 @@ init();
 function renderPanelPublico(listo){
   const c=document.getElementById('pub-content');
   if(!listo&&!datos.length){
-    c.innerHTML=`<div class="loading-card"><span class="loading-ico">🪗</span><div class="loading-txt">Cargando datos del club…</div><div class="loading-sub">Conectando con Google Sheets</div></div>`;
+    c.innerHTML=`
+    <div style="margin-top:13px;border-radius:14px;overflow:hidden;border:1px solid rgba(200,148,42,.2);box-shadow:0 8px 32px rgba(44,24,16,.18);">
+      <div style="background:linear-gradient(160deg,var(--MD),var(--M));padding:32px 20px;text-align:center;">
+        <div style="font-size:3rem;margin-bottom:10px;animation:spin 1.8s linear infinite;display:inline-block;">🪗</div>
+        <div style="font-family:var(--FD);font-size:1rem;font-style:italic;color:var(--OL);">Cargando datos del club…</div>
+        <div style="font-size:.73rem;color:rgba(237,224,196,.55);margin-top:4px;font-style:italic;">Conectando con Google Sheets</div>
+      </div>
+    </div>`;
     return;
   }
-  c.innerHTML=`<div class="card" id="qi-wrap">
-    <div class="ct">🔍 Consulta tus cuotas</div>
-    <p style="font-size:.8rem;color:var(--M);font-style:italic;margin-bottom:9px;">Ingresa los <strong>últimos 4 dígitos de tu RUT</strong>. Si termina en K, escribe <strong>0</strong>.</p>
-    <div class="ir">
-      <input type="tel" id="qi" placeholder="Ej: 5784" maxlength="4" pattern="[0-9]*" onkeydown="if(event.key==='Enter')buscar()"/>
-      <button class="btn br" onclick="buscar()">Buscar</button>
+  const liEl=document.getElementById('logo-img');
+  const hasLogo=liEl&&liEl.style.display!=='none'&&liEl.src&&!liEl.src.endsWith('/');
+  const logoHTML=hasLogo
+    ?`<img src="${liEl.src}" alt="Logo" style="width:88px;height:88px;border-radius:50%;object-fit:contain;border:3px solid rgba(200,148,42,.45);box-shadow:0 6px 24px rgba(44,24,16,.35);background:rgba(0,0,0,.18);">`
+    :`<div style="width:88px;height:88px;border-radius:50%;background:rgba(255,255,255,.1);border:3px solid rgba(200,148,42,.45);display:flex;align-items:center;justify-content:center;font-size:2.8rem;box-shadow:0 6px 24px rgba(44,24,16,.35);">🐦</div>`;
+  let statsBadge='';
+  if(datos.length){
+    const nS=[...new Set(datos.map(d=>d.n_socio))].length;
+    const dm2={};datos.forEach(d=>{if(!dm2[d.n_socio])dm2[d.n_socio]=0;if(esImpagoPasado(d))dm2[d.n_socio]++;});
+    const alDia=Object.values(dm2).filter(v=>v===0).length;
+    statsBadge=`<div style="display:inline-flex;gap:14px;background:rgba(255,255,255,.09);border:1px solid rgba(200,148,42,.28);border-radius:30px;padding:7px 18px;font-size:.74rem;color:rgba(237,224,196,.85);margin-top:14px;">
+      <span>👥 <strong style="color:var(--OL);">${nS}</strong> socios</span>
+      <span style="opacity:.35;">|</span>
+      <span>✅ <strong style="color:var(--OL);">${alDia}</strong> al día</span>
+    </div>`;
+  }
+  c.innerHTML=`
+  <div style="background:linear-gradient(160deg,var(--MD),var(--M));border-radius:14px;padding:32px 20px 26px;text-align:center;margin-top:13px;border:1px solid rgba(200,148,42,.2);box-shadow:0 8px 32px rgba(44,24,16,.2);position:relative;overflow:hidden;">
+    <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--R),var(--O),var(--R),var(--O));"></div>
+    <div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,transparent,transparent 40px,rgba(200,148,42,.03) 40px,rgba(200,148,42,.03) 80px);pointer-events:none;"></div>
+    <div style="display:flex;justify-content:center;margin-bottom:14px;">${logoHTML}</div>
+    <div style="font-family:var(--FD);font-size:1.6rem;font-weight:900;font-style:italic;color:var(--OL);text-shadow:0 2px 10px rgba(0,0,0,.4);line-height:1.15;margin-bottom:5px;">${cfg.nombre||'A Compás de Picaflor'}</div>
+    <div style="font-size:.77rem;color:rgba(237,224,196,.65);font-style:italic;">${cfg.sub||'Club de Cuecas'}</div>
+    ${statsBadge}
+  </div>
+
+  <div style="background:var(--P);border-radius:14px;padding:24px 18px 20px;margin-top:12px;border:1px solid rgba(92,58,30,.16);box-shadow:0 6px 20px rgba(44,24,16,.09);position:relative;overflow:hidden;">
+    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--R),var(--O),var(--R));"></div>
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-family:var(--FD);font-size:1.1rem;font-weight:700;font-style:italic;color:var(--MD);margin-bottom:6px;">🔍 Consulta tu estado de cuenta</div>
+      <div style="font-size:.8rem;color:var(--M);font-style:italic;line-height:1.6;">Ingresa los <strong>últimos 4 dígitos de tu RUT</strong><br>Si termina en K, escribe <strong>0</strong></div>
     </div>
-    <div id="res"></div>
-  </div>`;
+    <input type="tel" id="qi" placeholder="· · · ·" maxlength="4" pattern="[0-9]*"
+      onkeydown="if(event.key==='Enter')buscar()"
+      oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+      onfocus="this.style.borderColor='var(--R)';this.style.boxShadow='0 0 0 3px rgba(139,26,26,.12)';this.style.background='#fff'"
+      onblur="this.style.borderColor='rgba(92,58,30,.2)';this.style.boxShadow='none';this.style.background='#fff9f0'"
+      style="width:100%;padding:18px;font-size:2rem;letter-spacing:.8rem;text-align:center;font-weight:900;font-family:var(--FD);border:2px solid rgba(92,58,30,.2);border-radius:10px;background:#fff9f0;color:var(--T);outline:none;transition:all .2s;margin-bottom:11px;display:block;"/>
+    <button onclick="buscar()"
+      onmouseover="this.style.opacity='.88'"
+      onmouseout="this.style.opacity='1'"
+      onmousedown="this.style.transform='scale(.98)'"
+      onmouseup="this.style.transform=''"
+      style="width:100%;padding:15px;border:none;border-radius:10px;background:linear-gradient(160deg,var(--RL),var(--R));color:#fff8ee;font-family:var(--FD);font-size:1rem;font-weight:700;font-style:italic;cursor:pointer;box-shadow:0 4px 16px rgba(139,26,26,.28);letter-spacing:.3px;transition:all .15s;">
+      Consultar mi estado de cuenta →
+    </button>
+    <div id="res" style="margin-top:11px;"></div>
+  </div>
+  <div style="text-align:center;padding:10px 0 2px;font-size:.69rem;font-style:italic;color:var(--M);opacity:.55;">${HOY.getDate()} de ${MESC[HM]} de ${HY}${cfg.dir?' · '+cfg.dir:''}</div>`;
 }
 
 // ══════════════════════════════════════════════
