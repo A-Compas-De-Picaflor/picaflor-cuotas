@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -7,10 +8,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
-:root{--FD:"Book Antiqua",Palatino,"Palatino Linotype",Georgia,serif;
-      --FL:Georgia,"Times New Roman",Times,serif;
-      --R:#8B1A1A;--RL:#B02525;--M:#5C3A1E;--MD:#3A2210;
-      --O:#C8942A;--OL:#E8B84B;--C:#F2E6CC;--P:#FDF6E4;--T:#2C1810;}
+:root{--FD:"Book Antiqua",Palatino,Georgia,serif;--FL:Georgia,"Times New Roman",Times,serif;
+  --R:#1A3D8B;--RL:#2550B0;--M:#1E3A5C;--MD:#102235;--O:#C8942A;--OL:#E8B84B;--C:#eef2f7;--P:#f6f9fd;--T:#0d1f35;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:var(--FL);background:var(--C);min-height:100vh;font-size:15px;}
 header{background:linear-gradient(180deg,var(--MD),var(--M));border-bottom:3px solid var(--O);}
@@ -30,83 +29,73 @@ header{background:linear-gradient(180deg,var(--MD),var(--M));border-bottom:3px s
 .tab-btn:hover:not(.active){color:rgba(237,224,196,.8);}
 .panel{display:none;padding:14px 12px;max-width:580px;margin:0 auto;}
 .panel.active{display:block;}
-.card{background:var(--P);border-radius:6px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden;border:1px solid rgba(92,58,30,.2);box-shadow:0 4px 14px rgba(44,24,16,.1);}
+.card{background:var(--P);border-radius:6px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden;border:1px solid rgba(30,58,92,.15);box-shadow:0 4px 14px rgba(16,34,53,.08);}
 .card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--R),var(--O),var(--R));}
 .card.m::before{background:linear-gradient(90deg,var(--M),var(--O),var(--M));}
 .card.g::before{background:linear-gradient(90deg,#27ae60,#2ecc71,#27ae60);}
 .card.az::before{background:linear-gradient(90deg,#1A3D8B,#5B9BD5,#1A3D8B);}
-.card.gris::before{background:linear-gradient(90deg,#7a7a7a,#aaa,#7a7a7a);}
-.ct{font-family:var(--FD);font-size:.97rem;font-weight:700;font-style:italic;color:var(--MD);margin-bottom:11px;display:flex;align-items:center;gap:6px;border-bottom:1px solid rgba(92,58,30,.14);padding-bottom:7px;}
+.ct{font-family:var(--FD);font-size:.97rem;font-weight:700;font-style:italic;color:var(--MD);margin-bottom:11px;display:flex;align-items:center;gap:6px;border-bottom:1px solid rgba(30,58,92,.1);padding-bottom:7px;}
 .ir{display:flex;gap:7px;margin-bottom:8px;}
-input,select,textarea{flex:1;padding:10px 13px;border:1.5px solid rgba(92,58,30,.26);border-radius:4px;font-size:.92rem;font-family:var(--FL);outline:none;background:#fff9f0;color:var(--T);transition:border .2s;}
+input,select,textarea{flex:1;padding:10px 13px;border:1.5px solid rgba(30,58,92,.2);border-radius:4px;font-size:.92rem;font-family:var(--FL);outline:none;background:#f0f5fc;color:var(--T);transition:border .2s;}
 select{cursor:pointer;}
 input:focus,select:focus,textarea:focus{border-color:var(--R);background:#fff;}
-input::placeholder,textarea::placeholder{color:rgba(92,58,30,.37);font-style:italic;}
+input::placeholder,textarea::placeholder{color:rgba(30,58,92,.35);font-style:italic;}
 textarea{resize:vertical;min-height:80px;line-height:1.5;}
 .ig{margin-bottom:9px;}
 .il{font-size:.76rem;font-weight:600;color:var(--M);margin-bottom:3px;display:block;font-style:italic;}
 .btn{padding:10px 16px;border:none;border-radius:4px;font-family:var(--FL);font-size:.86rem;font-weight:600;font-style:italic;cursor:pointer;transition:.15s;letter-spacing:.2px;}
 .btn:active{transform:scale(.97);}.btn:hover{opacity:.87;}
-.br{background:linear-gradient(160deg,var(--RL),var(--R));color:#fff8ee;box-shadow:0 3px 9px rgba(139,26,26,.3);}
-.bm{background:linear-gradient(160deg,var(--M),var(--MD));color:var(--OL);box-shadow:0 3px 9px rgba(44,24,16,.28);}
+.br{background:linear-gradient(160deg,var(--RL),var(--R));color:#fff;box-shadow:0 3px 9px rgba(26,61,139,.3);}
+.bm{background:linear-gradient(160deg,var(--M),var(--MD));color:var(--OL);box-shadow:0 3px 9px rgba(16,34,53,.28);}
 .bg{background:linear-gradient(160deg,#27ae60,#1a8c4a);color:#fff;box-shadow:0 3px 9px rgba(39,174,96,.3);}
 .baz{background:linear-gradient(160deg,#1A3D8B,#2550B0);color:#fff;box-shadow:0 3px 9px rgba(26,61,139,.3);}
-.bgr{background:#e0d8cc;color:var(--T);}
+.bgr{background:#dde5f0;color:var(--T);}
 .bcp{background:linear-gradient(160deg,#555,#333);color:#fff;}
-.sm{padding:7px 11px;font-size:.78rem;}
-.xs{padding:4px 8px;font-size:.72rem;}
-.uz{border:2px dashed rgba(139,26,26,.3);border-radius:5px;padding:18px;text-align:center;cursor:pointer;background:rgba(139,26,26,.03);margin-bottom:9px;}
+.sm{padding:7px 11px;font-size:.78rem;}.xs{padding:4px 8px;font-size:.72rem;}
+.uz{border:2px dashed rgba(26,61,139,.25);border-radius:5px;padding:18px;text-align:center;cursor:pointer;background:rgba(26,61,139,.03);margin-bottom:9px;}
 .uz input{display:none;}.ui{font-size:1.7rem;display:block;margin-bottom:4px;}
-.uz p{color:var(--R);font-weight:600;font-style:italic;font-size:.86rem;}
-.uz span{color:#999;font-size:.73rem;}
+.uz p{color:var(--R);font-weight:600;font-style:italic;font-size:.86rem;}.uz span{color:#999;font-size:.73rem;}
 .al{padding:9px 13px;border-radius:4px;font-size:.83rem;margin-top:7px;font-style:italic;border-left:3px solid;}
-.ali{background:rgba(92,58,30,.05);color:var(--M);border-color:var(--M);}
-.ale{background:rgba(139,26,26,.07);color:var(--R);border-color:var(--R);}
+.ali{background:rgba(30,58,92,.05);color:var(--M);border-color:var(--M);}
+.ale{background:rgba(139,26,26,.07);color:#8B1A1A;border-color:#8B1A1A;}
 .alo{background:rgba(39,174,96,.07);color:#1a7a44;border-color:#27ae60;}
 .sg{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px;}
-.sb{background:var(--P);border-radius:6px;padding:13px;text-align:center;border:1px solid rgba(92,58,30,.16);position:relative;overflow:hidden;}
+.sb{background:var(--P);border-radius:6px;padding:13px;text-align:center;border:1px solid rgba(30,58,92,.12);position:relative;overflow:hidden;}
 .sb::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
-.sb.sr::before{background:var(--R);}.sb.sm2::before{background:var(--M);}
-.sb.so::before{background:var(--O);}.sb.sgo::before{background:#27ae60;}
+.sb.sr::before{background:#8B1A1A;}.sb.sm2::before{background:var(--M);}.sb.so::before{background:var(--O);}.sb.sgo::before{background:#27ae60;}
 .sn{font-family:var(--FD);font-size:1.9rem;font-weight:900;color:var(--MD);line-height:1;}
 .sn.big{font-size:1.15rem;}.sl{font-size:.7rem;color:var(--M);font-style:italic;margin-top:2px;}
-.ats{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:13px;padding-bottom:10px;border-bottom:1px solid rgba(92,58,30,.18);}
-.at{padding:6px 11px;border:1.5px solid rgba(92,58,30,.2);border-radius:4px;font-family:var(--FL);font-size:.78rem;font-weight:600;font-style:italic;cursor:pointer;background:#f5ede0;color:var(--M);transition:.15s;}
+.ats{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:13px;padding-bottom:10px;border-bottom:1px solid rgba(30,58,92,.15);}
+.at{padding:6px 11px;border:1.5px solid rgba(30,58,92,.18);border-radius:4px;font-family:var(--FL);font-size:.78rem;font-weight:600;font-style:italic;cursor:pointer;background:#e8eef7;color:var(--M);transition:.15s;}
 .at.active{background:var(--R);color:#fff;border-color:var(--R);}
+.at:hover:not(.active){background:#d5dff0;}
 .ap{display:none;}.ap.active{display:block;}
-.tw{overflow-x:auto;border-radius:5px;border:1px solid rgba(92,58,30,.16);margin-top:7px;}
+.tw{overflow-x:auto;border-radius:5px;border:1px solid rgba(30,58,92,.13);margin-top:7px;}
 table{width:100%;border-collapse:collapse;font-size:.77rem;}
 th{background:linear-gradient(135deg,var(--MD),var(--M));color:var(--OL);padding:7px 8px;text-align:left;font-family:var(--FL);font-weight:600;font-style:italic;}
-td{padding:6px 8px;border-bottom:1px solid rgba(92,58,30,.07);}
-tr:nth-child(even) td{background:rgba(92,58,30,.03);}
-.tr{color:var(--R);font-weight:700;}.tg2c{color:#1e8c4a;font-weight:700;}.to{color:#aaa;}.tna{color:#999;font-style:italic;}
-.rh{border-radius:6px;overflow:hidden;margin-bottom:11px;box-shadow:0 4px 14px rgba(44,24,16,.15);}
+td{padding:6px 8px;border-bottom:1px solid rgba(30,58,92,.06);}
+tr:nth-child(even) td{background:rgba(30,58,92,.025);}
+.tr{color:#8B1A1A;font-weight:700;}.tg2c{color:#1e8c4a;font-weight:700;}.to{color:#aaa;}.tna{color:#999;font-style:italic;}
+.rh{border-radius:6px;overflow:hidden;margin-bottom:11px;box-shadow:0 4px 14px rgba(16,34,53,.12);}
 .rt{background:linear-gradient(135deg,var(--MD),var(--M));padding:13px 15px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--O);}
 .rn{font-family:var(--FD);font-size:1.05rem;font-weight:700;font-style:italic;color:var(--OL);}
 .rr{font-size:.72rem;color:rgba(237,224,196,.6);font-style:italic;}
 .bad-al{background:rgba(200,148,42,.2);border:2px solid rgba(200,148,42,.42);border-radius:5px;padding:6px 11px;font-weight:600;font-size:.8rem;color:var(--OL);font-style:italic;}
-.bad-d{background:var(--R);border-radius:5px;padding:6px 11px;text-align:center;min-width:75px;border:1px solid rgba(255,255,255,.12);}
+.bad-d{background:#8B1A1A;border-radius:5px;padding:6px 11px;text-align:center;min-width:75px;}
 .bdn{font-family:var(--FD);font-size:1.8rem;font-weight:900;color:white;line-height:1;}
 .bdl{font-size:.62rem;color:rgba(255,255,255,.78);text-transform:uppercase;letter-spacing:.6px;}
 .sl2{font-family:var(--FD);font-size:.78rem;font-style:italic;color:var(--M);margin:11px 0 5px;display:flex;align-items:center;gap:5px;}
-.sl2::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(92,58,30,.2),transparent);}
-.lc{border-radius:5px;overflow:hidden;border:1px solid rgba(92,58,30,.14);}
-.cr{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-bottom:1px solid rgba(92,58,30,.08);font-size:.84rem;}
+.sl2::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(30,58,92,.18),transparent);}
+.lc{border-radius:5px;overflow:hidden;border:1px solid rgba(30,58,92,.12);}
+.cr{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-bottom:1px solid rgba(30,58,92,.06);font-size:.84rem;}
 .cr:last-child{border-bottom:none;}.cr.imp{background:rgba(139,26,26,.04);}.cr.pag{background:rgba(39,174,96,.03);}.cr.na{background:rgba(150,150,150,.04);}
 .crp{font-weight:600;color:var(--T);}.crm{color:var(--M);font-size:.81rem;font-style:italic;}
 .tag{font-size:.67rem;font-weight:600;padding:2px 7px;border-radius:3px;font-style:italic;}
-.ti{background:rgba(139,26,26,.1);color:var(--R);}.tp{background:rgba(39,174,96,.1);color:#1e8c4a;}
-.tna2{background:rgba(150,150,150,.13);color:#777;}
-.mt{background:var(--R);color:white;border-radius:5px;padding:10px 14px;margin-bottom:9px;display:flex;justify-content:space-between;align-items:center;}
-.mtl{font-size:.75rem;font-style:italic;opacity:.85;line-height:1.4;}
-.mtn{font-family:var(--FD);font-size:1.35rem;font-weight:900;}
+.ti{background:rgba(139,26,26,.1);color:#8B1A1A;}.tp{background:rgba(39,174,96,.1);color:#1e8c4a;}.tna2{background:rgba(150,150,150,.13);color:#777;}
 .semaforo{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:.8rem;font-weight:700;font-style:italic;border:2px solid;}
-.sem-v{background:#e8f5e9;color:#1a7a44;border-color:#27ae60;}
-.sem-a{background:#fff8e1;color:#7a5c00;border-color:#f0ad00;}
-.sem-r{background:#fde8e8;color:#7a1a1a;border-color:var(--R);}
-.alerta-mor{background:linear-gradient(135deg,#7a0000,var(--R));color:white;border-radius:6px;padding:13px 15px;margin-bottom:10px;display:flex;gap:11px;align-items:flex-start;font-size:.83rem;line-height:1.5;}
-.alerta-mor .aico{font-size:1.6rem;flex-shrink:0;margin-top:1px;}
-.alerta-mor strong{display:block;font-size:.92rem;margin-bottom:3px;}
+.sem-v{background:#e8f5e9;color:#1a7a44;border-color:#27ae60;}.sem-a{background:#fff8e1;color:#7a5c00;border-color:#f0ad00;}.sem-r{background:#fde8e8;color:#7a1a1a;border-color:#8B1A1A;}
+.alerta-mor{background:linear-gradient(135deg,#7a0000,#8B1A1A);color:white;border-radius:6px;padding:13px 15px;margin-bottom:10px;display:flex;gap:11px;align-items:flex-start;font-size:.83rem;line-height:1.5;}
+.alerta-mor .aico{font-size:1.6rem;flex-shrink:0;margin-top:1px;}.alerta-mor strong{display:block;font-size:.92rem;margin-bottom:3px;}
 .insignia{background:linear-gradient(135deg,#4a3000,#8B6914,#C8942A,#E8B84B,#C8942A,#8B6914,#4a3000);border-radius:9px;padding:2.5px;margin:11px 0;}
 .ins-inner{background:linear-gradient(160deg,#fffbf0,#fef3d6,#fff9ec);border-radius:7px;padding:18px;text-align:center;}
 .ins-ico{font-size:3rem;display:block;margin-bottom:5px;filter:drop-shadow(0 2px 6px rgba(200,148,42,.55));}
@@ -114,133 +103,121 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
 .ins-sub{font-size:.75rem;color:var(--O);font-style:italic;margin-top:3px;}
 .cal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:12px;}
 .cal-m{border-radius:5px;padding:8px 4px;text-align:center;border:1.5px solid transparent;font-size:.7rem;}
-.cal-ico{font-size:1.05rem;display:block;margin-bottom:2px;}
-.cal-mes{display:block;font-weight:700;font-size:.72rem;margin-bottom:1px;}
-.cal-lbl{display:block;font-size:.6rem;font-style:italic;opacity:.8;}
-.cal-pag{background:#e8f5e9;border-color:#a5d6a7;color:#1a6b35;}
-.cal-imp{background:#fde8e8;border-color:#ef9a9a;color:#7a1a1a;}
-.cal-fut{background:#f5f5f5;border-color:#e0e0e0;color:#999;}
-.cal-na{background:#f0f0f0;border-color:#ccc;color:#999;}
-.cal-sd{background:rgba(92,58,30,.04);border-color:rgba(92,58,30,.1);color:#bbb;}
-.cal-cur{outline:2.5px solid var(--O);outline-offset:1px;}
-.fest{text-align:center;padding:18px 14px;}
-.fi{font-size:2.7rem;display:block;margin-bottom:5px;}
-.fm{font-family:var(--FD);font-size:1.15rem;font-weight:700;font-style:italic;color:#1a7a44;margin-bottom:4px;}
-.fs2{font-size:.8rem;color:#27ae60;font-style:italic;}
+.cal-ico{font-size:1.05rem;display:block;margin-bottom:2px;}.cal-mes{display:block;font-weight:700;font-size:.72rem;margin-bottom:1px;}.cal-lbl{display:block;font-size:.6rem;font-style:italic;opacity:.8;}
+.cal-pag{background:#e8f5e9;border-color:#a5d6a7;color:#1a6b35;}.cal-imp{background:#fde8e8;border-color:#ef9a9a;color:#7a1a1a;}
+.cal-fut{background:#f5f5f5;border-color:#e0e0e0;color:#999;}.cal-na{background:#f0f0f0;border-color:#ccc;color:#999;}
+.cal-sd{background:rgba(30,58,92,.03);border-color:rgba(30,58,92,.08);color:#bbb;}.cal-cur{outline:2.5px solid var(--O);outline-offset:1px;}
+.fest{text-align:center;padding:18px 14px;}.fi{font-size:2.7rem;display:block;margin-bottom:5px;}
+.fm2{font-family:var(--FD);font-size:1.15rem;font-weight:700;font-style:italic;color:#1a7a44;margin-bottom:4px;}.fs2{font-size:.8rem;color:#27ae60;font-style:italic;}
 .sem-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:4px;margin-bottom:4px;font-size:.83rem;}
-.fb{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px;padding:9px;background:rgba(92,58,30,.05);border-radius:5px;border:1px solid rgba(92,58,30,.11);}
-.fb select{flex:1;min-width:90px;padding:7px 9px;font-size:.78rem;}
+.fb{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px;padding:9px;background:rgba(30,58,92,.04);border-radius:5px;border:1px solid rgba(30,58,92,.1);}
 .tg2{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:9px;}
 .to2{border-radius:5px;padding:9px 5px;border:2px solid transparent;cursor:pointer;text-align:center;font-size:.7rem;font-style:italic;font-weight:600;font-family:var(--FL);transition:.15s;}
 .to2.sel{border-color:var(--O);box-shadow:0 0 0 3px rgba(200,148,42,.28);}
 .ts{display:flex;height:18px;border-radius:3px;overflow:hidden;margin-bottom:4px;}
 .ta{flex:1;}.tb{flex:1;}.tc{width:7px;}
-.fb2{background:rgba(92,58,30,.05);border-radius:5px;padding:9px 11px;font-size:.75rem;color:var(--M);margin-top:7px;line-height:1.65;border:1px solid rgba(92,58,30,.12);font-style:italic;}
-.fb2 code{display:block;background:rgba(92,58,30,.1);border-radius:4px;padding:5px 8px;margin:4px 0;font-family:monospace;font-size:.72rem;color:var(--T);overflow-x:auto;font-style:normal;}
-.lr{display:flex;align-items:center;gap:11px;padding:11px;background:rgba(92,58,30,.05);border-radius:5px;margin-bottom:7px;border:1px dashed rgba(92,58,30,.17);}
-.lps{width:50px;height:50px;border-radius:50%;background:rgba(92,58,30,.07);border:2px dashed var(--M);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;}
-#logo-prev{width:50px;height:50px;border-radius:50%;object-fit:contain;border:2px solid rgba(92,58,30,.3);display:none;flex-shrink:0;}
+.lr{display:flex;align-items:center;gap:11px;padding:11px;background:rgba(30,58,92,.04);border-radius:5px;margin-bottom:7px;border:1px dashed rgba(30,58,92,.15);}
+.lps{width:50px;height:50px;border-radius:50%;background:rgba(30,58,92,.06);border:2px dashed var(--M);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;}
+#logo-prev{width:50px;height:50px;border-radius:50%;object-fit:contain;border:2px solid rgba(30,58,92,.25);display:none;flex-shrink:0;}
 .wap-box{background:#e8f5e9;border:1px solid #a5d6a7;border-radius:7px;padding:13px;font-size:.82rem;line-height:1.6;color:#1b5e20;margin:9px 0;white-space:pre-wrap;font-family:var(--FL);}
-.tl{border-radius:5px;overflow:hidden;border:1px solid rgba(92,58,30,.14);}
-.tlr{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid rgba(92,58,30,.07);font-size:.82rem;}
-.tlr:last-child{border-bottom:none;}
-.trk{font-family:var(--FD);font-size:.95rem;font-weight:900;color:var(--O);min-width:24px;}
+.tl{border-radius:5px;overflow:hidden;border:1px solid rgba(30,58,92,.12);}
+.tlr{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid rgba(30,58,92,.06);font-size:.82rem;}
+.tlr:last-child{border-bottom:none;}.trk{font-family:var(--FD);font-size:.95rem;font-weight:900;color:var(--O);min-width:24px;}
 .sb2{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap;}
 .fh{font-size:.76rem;font-style:italic;color:var(--M);text-align:center;padding:7px 0 1px;opacity:.7;}
-.yr-head{background:linear-gradient(135deg,rgba(58,34,16,.93),rgba(92,58,30,.88));border-radius:6px;padding:10px 14px;margin:14px 0 6px;display:flex;justify-content:space-between;align-items:center;}
+.yr-head{background:linear-gradient(135deg,rgba(16,34,53,.93),rgba(30,58,92,.88));border-radius:6px;padding:10px 14px;margin:14px 0 6px;display:flex;justify-content:space-between;align-items:center;}
 .yr-anio{font-family:var(--FD);font-size:1.08rem;font-weight:900;font-style:italic;color:var(--OL);}
 .yr-badge{font-size:.71rem;font-style:italic;color:rgba(237,224,196,.75);background:rgba(255,255,255,.08);padding:3px 9px;border-radius:4px;white-space:nowrap;}
 .yr-prog-l{display:flex;justify-content:space-between;font-size:.68rem;font-style:italic;color:var(--M);margin-bottom:4px;}
-.yr-prog-w{background:rgba(92,58,30,.12);border-radius:4px;height:7px;margin-bottom:10px;overflow:hidden;}
+.yr-prog-w{background:rgba(30,58,92,.1);border-radius:4px;height:7px;margin-bottom:10px;overflow:hidden;}
 .yr-prog-b{height:100%;border-radius:4px;transition:width .6s;}
 .dvig{background:rgba(139,26,26,.04);border:1px solid rgba(139,26,26,.12);border-radius:5px;margin-bottom:9px;overflow:hidden;}
-.dvig-tit{font-size:.71rem;font-weight:700;font-style:italic;color:var(--R);padding:5px 12px 4px;background:rgba(139,26,26,.06);border-bottom:1px solid rgba(139,26,26,.1);}
+.dvig-tit{font-size:.71rem;font-weight:700;font-style:italic;color:#8B1A1A;padding:5px 12px 4px;background:rgba(139,26,26,.06);border-bottom:1px solid rgba(139,26,26,.1);}
 .modal-ov{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.65);z-index:900;align-items:center;justify-content:center;}
 .modal-ov.open{display:flex;}
 .modal-box{background:var(--P);border-radius:9px;padding:22px;max-width:340px;width:93%;border-top:4px solid var(--O);box-shadow:0 12px 40px rgba(0,0,0,.45);max-height:90vh;overflow-y:auto;}
-.modal-tit{font-family:var(--FD);font-size:1.05rem;font-weight:700;font-style:italic;color:var(--MD);margin-bottom:13px;border-bottom:1px solid rgba(92,58,30,.14);padding-bottom:8px;}
-.modal-info{background:linear-gradient(135deg,rgba(92,58,30,.07),rgba(200,148,42,.06));border-radius:5px;padding:11px 13px;margin-bottom:13px;font-size:.86rem;line-height:1.7;border-left:3px solid var(--O);}
+.modal-tit{font-family:var(--FD);font-size:1.05rem;font-weight:700;font-style:italic;color:var(--MD);margin-bottom:13px;border-bottom:1px solid rgba(30,58,92,.12);padding-bottom:8px;}
+.modal-info{background:linear-gradient(135deg,rgba(30,58,92,.06),rgba(200,148,42,.05));border-radius:5px;padding:11px 13px;margin-bottom:13px;font-size:.86rem;line-height:1.7;border-left:3px solid var(--O);}
 .modal-info .mi-nom{font-family:var(--FD);font-size:1rem;font-weight:700;color:var(--MD);display:block;margin-bottom:2px;}
 .radio-g{display:flex;flex-direction:column;gap:9px;margin-bottom:15px;}
-.radio-o{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:6px;border:2px solid rgba(92,58,30,.18);cursor:pointer;transition:.15s;background:#fff9f0;}
+.radio-o{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:6px;border:2px solid rgba(30,58,92,.15);cursor:pointer;transition:.15s;background:#eef2f7;}
 .radio-o:has(input:checked){border-color:var(--O);background:rgba(200,148,42,.07);}
 .radio-o input{width:17px;height:17px;accent-color:var(--R);flex-shrink:0;}
-.ro-l{font-weight:700;font-size:.9rem;color:var(--T);}
-.ro-d{font-size:.73rem;color:var(--M);font-style:italic;margin-top:1px;}
+.ro-l{font-weight:700;font-size:.9rem;color:var(--T);}.ro-d{font-size:.73rem;color:var(--M);font-style:italic;margin-top:1px;}
 .modal-btns{display:flex;gap:8px;}
-.ref-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:7px 0;}
 .ref-card{border-radius:5px;padding:9px 11px;font-size:.76rem;font-style:italic;}
-.ref-p{background:#e8f5e9;border:1px solid #a5d6a7;color:#1a6b35;}
-.ref-i{background:#fde8e8;border:1px solid #ef9a9a;color:#7a1a1a;}
-.ref-na{background:#f0f0f0;border:1px solid #ccc;color:#666;}
+.ref-p{background:#e8f5e9;border:1px solid #a5d6a7;color:#1a6b35;}.ref-i{background:#fde8e8;border:1px solid #ef9a9a;color:#7a1a1a;}.ref-na{background:#f0f0f0;border:1px solid #ccc;color:#666;}
 .ref-tit{font-weight:700;display:block;margin-bottom:3px;font-size:.8rem;}
 .contact-card{background:linear-gradient(135deg,#f0f4ff,#e8eeff);border:1.5px solid #b3c6e8;border-radius:8px;padding:14px 16px;margin-top:11px;}
 .contact-card .ct{color:#1A3D8B;border-color:rgba(26,61,139,.15);}
 .msg-preview{background:#fff;border:1px solid #b3c6e8;border-radius:6px;padding:10px 13px;font-size:.78rem;white-space:pre-wrap;line-height:1.65;color:#2a3a6a;margin:9px 0;max-height:160px;overflow-y:auto;font-family:var(--FL);}
 .copy-feedback{display:inline-flex;align-items:center;gap:5px;font-size:.74rem;font-style:italic;color:#1A3D8B;padding:4px 0;opacity:0;transition:opacity .4s;}
 .copy-feedback.show{opacity:1;}
-.calc-box{background:linear-gradient(135deg,rgba(139,26,26,.06),rgba(200,148,42,.04));border:1px solid rgba(139,26,26,.18);border-radius:8px;padding:14px 16px;margin-top:9px;}
-.calc-title{font-family:var(--FD);font-size:.9rem;font-weight:700;font-style:italic;color:var(--R);margin-bottom:10px;display:flex;align-items:center;gap:5px;}
-.calc-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:.82rem;border-bottom:1px solid rgba(92,58,30,.08);}
+.calc-box{background:linear-gradient(135deg,rgba(26,61,139,.05),rgba(200,148,42,.03));border:1px solid rgba(26,61,139,.15);border-radius:8px;padding:14px 16px;margin-top:9px;}
+.calc-title{font-family:var(--FD);font-size:.9rem;font-weight:700;font-style:italic;color:var(--R);margin-bottom:10px;}
+.calc-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:.82rem;border-bottom:1px solid rgba(30,58,92,.07);}
 .calc-row:last-child{border-bottom:none;font-size:.92rem;font-weight:700;}
-.calc-row .lbl{color:var(--M);font-style:italic;}
-.calc-row .val{font-weight:700;color:var(--R);}
-.calc-row .val.ok{color:#1a7a44;}
+.calc-row .lbl{color:var(--M);font-style:italic;}.calc-row .val{font-weight:700;color:var(--R);}
 .res-banner{background:linear-gradient(135deg,#1b5e20,#2e7d32);border-radius:7px;padding:14px 16px;margin-bottom:12px;color:white;}
-.res-banner-t{font-family:var(--FD);font-size:1rem;font-weight:700;font-style:italic;margin-bottom:10px;opacity:.95;}
+.res-banner-t{font-family:var(--FD);font-size:1rem;font-weight:700;font-style:italic;margin-bottom:10px;}
 .res-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
 .res-item{background:rgba(255,255,255,.12);border-radius:5px;padding:9px 11px;text-align:center;border:1px solid rgba(255,255,255,.18);}
 .res-num{font-family:var(--FD);font-size:1.55rem;font-weight:900;line-height:1.05;}
 .res-lbl{font-size:.65rem;opacity:.82;font-style:italic;margin-top:2px;}
 .diag-box{background:rgba(255,255,255,.08);border-radius:5px;padding:9px 11px;margin-top:10px;font-size:.73rem;opacity:.88;line-height:1.6;}
-.chip{font-size:.7rem;background:rgba(139,26,26,.1);color:var(--R);padding:2px 8px;border-radius:3px;font-style:italic;margin-left:6px;}
-.cobro-res-list{border-radius:6px;overflow:hidden;border:1px solid rgba(92,58,30,.16);margin-top:9px;}
-.cobro-soc-row{display:flex;justify-content:space-between;align-items:center;padding:11px 13px;cursor:pointer;background:var(--P);border-bottom:1px solid rgba(92,58,30,.07);transition:.15s;}
-.cobro-soc-row:last-child{border-bottom:none;}
-.cobro-soc-row:hover{background:rgba(200,148,42,.08);}
-.cobro-soc-row.csel{background:rgba(200,148,42,.12);border-left:3px solid var(--O);}
-.cobro-soc-nom{font-weight:700;color:var(--T);font-size:.9rem;}
-.cobro-soc-det{font-size:.71rem;color:var(--M);font-style:italic;margin-top:2px;}
+.chip{font-size:.7rem;background:rgba(26,61,139,.1);color:var(--R);padding:2px 8px;border-radius:3px;font-style:italic;margin-left:6px;}
+.cobro-res-list{border-radius:6px;overflow:hidden;border:1px solid rgba(30,58,92,.14);margin-top:9px;}
+.cobro-soc-row{display:flex;justify-content:space-between;align-items:center;padding:11px 13px;cursor:pointer;background:var(--P);border-bottom:1px solid rgba(30,58,92,.06);transition:.15s;}
+.cobro-soc-row:last-child{border-bottom:none;}.cobro-soc-row:hover{background:rgba(200,148,42,.07);}
+.cobro-soc-row.csel{background:rgba(200,148,42,.11);border-left:3px solid var(--O);}
+.cobro-soc-nom{font-weight:700;color:var(--T);font-size:.9rem;}.cobro-soc-det{font-size:.71rem;color:var(--M);font-style:italic;margin-top:2px;}
 .cobro-soc-badge{font-size:.72rem;padding:3px 10px;border-radius:3px;font-weight:700;font-style:italic;flex-shrink:0;white-space:nowrap;}
-.cbr{background:rgba(139,26,26,.1);color:var(--R);}
-.cbg{background:rgba(39,174,96,.1);color:#1a7a44;}
-.cuota-list{border-radius:6px;overflow:hidden;border:1px solid rgba(92,58,30,.15);margin-bottom:11px;}
-.sel-all-row{display:flex;align-items:center;gap:10px;padding:10px 13px;background:rgba(92,58,30,.06);border-bottom:2px solid rgba(92,58,30,.13);cursor:pointer;font-size:.84rem;font-weight:700;font-style:italic;color:var(--M);user-select:none;}
+.cbr{background:rgba(139,26,26,.1);color:#8B1A1A;}.cbg{background:rgba(39,174,96,.1);color:#1a7a44;}
+.cuota-list{border-radius:6px;overflow:hidden;border:1px solid rgba(30,58,92,.13);margin-bottom:11px;}
+.sel-all-row{display:flex;align-items:center;gap:10px;padding:10px 13px;background:rgba(30,58,92,.05);border-bottom:2px solid rgba(30,58,92,.1);cursor:pointer;font-size:.84rem;font-weight:700;font-style:italic;color:var(--M);user-select:none;}
 .sel-all-row input{width:17px;height:17px;accent-color:var(--R);cursor:pointer;flex-shrink:0;pointer-events:none;}
-.cuota-row{display:flex;align-items:center;gap:10px;padding:10px 13px;border-bottom:1px solid rgba(92,58,30,.07);cursor:pointer;transition:.12s;user-select:none;}
-.cuota-row:last-child{border-bottom:none;}
-.cuota-row:hover{background:rgba(200,148,42,.05);}
+.cuota-row{display:flex;align-items:center;gap:10px;padding:10px 13px;border-bottom:1px solid rgba(30,58,92,.06);cursor:pointer;transition:.12s;user-select:none;}
+.cuota-row:last-child{border-bottom:none;}.cuota-row:hover{background:rgba(200,148,42,.05);}
 .cuota-row.cq-sel{background:rgba(39,174,96,.04);}
 .cuota-row input[type=checkbox]{width:17px;height:17px;accent-color:#27ae60;cursor:pointer;flex-shrink:0;pointer-events:none;}
-.cuota-mes{font-weight:600;color:var(--T);flex:1;font-size:.86rem;}
-.cuota-anio{font-size:.72rem;color:var(--M);font-style:italic;}
-.cuota-mto{font-weight:700;color:var(--R);font-size:.84rem;}
+.cuota-mes{font-weight:600;color:var(--T);flex:1;font-size:.86rem;}.cuota-mto{font-weight:700;color:#8B1A1A;font-size:.84rem;}
 .cobro-total-bar{background:linear-gradient(135deg,var(--MD),var(--M));border:2px solid rgba(200,148,42,.4);border-radius:8px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin:10px 0 11px;}
-.cbt-lbl{font-size:.78rem;color:var(--OL);opacity:.9;font-style:italic;}
-.cbt-sub{font-size:.67rem;color:rgba(237,224,196,.7);margin-top:2px;font-style:italic;}
+.cbt-lbl{font-size:.78rem;color:var(--OL);opacity:.9;font-style:italic;}.cbt-sub{font-size:.67rem;color:rgba(237,224,196,.7);margin-top:2px;font-style:italic;}
 .cbt-val{font-family:var(--FD);font-size:2.2rem;font-weight:900;line-height:1.05;color:var(--OL);}
 .cobro-empty{text-align:center;padding:24px;color:var(--M);font-style:italic;font-size:.84rem;}
 .cobro-empty span{font-size:2.2rem;display:block;margin-bottom:6px;}
 .vou-table{width:100%;border-collapse:collapse;font-size:.78rem;margin:9px 0;}
-.vou-table th{background:rgba(92,58,30,.08);color:var(--M);padding:6px 9px;text-align:left;font-style:italic;font-family:var(--FL);}
-.vou-table td{padding:5px 9px;border-bottom:1px dashed rgba(92,58,30,.12);}
+.vou-table th{background:rgba(30,58,92,.07);color:var(--M);padding:6px 9px;text-align:left;font-style:italic;}
+.vou-table td{padding:5px 9px;border-bottom:1px dashed rgba(30,58,92,.1);}
 .vou-table tr:last-child td{border-bottom:none;}
 .cobro-hdr{background:linear-gradient(135deg,var(--MD),var(--M));border-radius:7px;padding:13px 15px;margin-bottom:13px;display:flex;justify-content:space-between;align-items:center;}
 .cobro-hdr-nom{font-family:var(--FD);font-size:1.05rem;font-weight:900;font-style:italic;color:var(--OL);}
 .cobro-hdr-rut{font-size:.71rem;color:rgba(237,224,196,.65);font-style:italic;}
-/* loading */
-.loading-card{background:linear-gradient(135deg,var(--MD),var(--M));border-radius:8px;padding:22px;text-align:center;margin-top:13px;}
+.loading-card{background:linear-gradient(160deg,var(--MD),var(--M));border-radius:8px;padding:22px;text-align:center;margin-top:13px;}
 .loading-ico{font-size:2.5rem;display:block;margin-bottom:8px;animation:spin 1.8s linear infinite;}
 @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
-.loading-txt{font-family:var(--FD);font-size:1rem;font-style:italic;color:var(--OL);}
-.loading-sub{font-size:.74rem;color:rgba(237,224,196,.65);margin-top:4px;font-style:italic;}
-.sync-bar{display:flex;align-items:center;gap:9px;padding:8px 12px;background:rgba(26,61,139,.08);border:1px solid rgba(26,61,139,.18);border-radius:5px;margin-bottom:10px;flex-wrap:wrap;}
+.loading-txt{font-family:var(--FD);font-size:1rem;font-style:italic;color:var(--OL);}.loading-sub{font-size:.74rem;color:rgba(237,224,196,.65);margin-top:4px;font-style:italic;}
+.sync-bar{display:flex;align-items:center;gap:9px;padding:8px 12px;background:rgba(26,61,139,.07);border:1px solid rgba(26,61,139,.16);border-radius:5px;margin-bottom:10px;flex-wrap:wrap;}
 .sync-bar span{font-size:.78rem;font-style:italic;color:#2a4a8a;flex:1;}
-@media(max-width:400px){#hdr-t{font-size:1.25rem;}.logo-w{width:60px;height:60px;}.tg2{grid-template-columns:repeat(2,1fr);}.cal-grid{grid-template-columns:repeat(3,1fr);}}
+/* COMPROBANTES */
+.vr-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:13px;}
+.vr-stat{background:var(--P);border-radius:7px;padding:12px 10px;text-align:center;border:1px solid rgba(30,58,92,.12);position:relative;overflow:hidden;}
+.vr-stat::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.vr-stat.vrs1::before{background:var(--R);}.vr-stat.vrs2::before{background:#27ae60;}.vr-stat.vrs3::before{background:var(--O);}
+.vr-sn{font-family:var(--FD);font-size:1.5rem;font-weight:900;color:var(--MD);line-height:1;}
+.vr-sl{font-size:.65rem;color:var(--M);font-style:italic;margin-top:2px;}
+.vr-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid rgba(30,58,92,.06);font-size:.82rem;}
+.vr-row:last-child{border-bottom:none;}
+.vr-num{font-family:var(--FD);font-size:.95rem;font-weight:900;color:var(--O);min-width:28px;}
+.vr-body{flex:1;min-width:0;}
+.vr-nom{font-weight:700;color:var(--T);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.vr-det{font-size:.69rem;color:var(--M);font-style:italic;margin-top:1px;}
+.vr-monto{font-weight:700;color:#1a7a44;white-space:nowrap;font-size:.83rem;}
+.vr-fecha{font-size:.68rem;color:#999;text-align:right;white-space:nowrap;}
+@media(max-width:400px){#hdr-t{font-size:1.25rem;}.logo-w{width:60px;height:60px;}.tg2{grid-template-columns:repeat(2,1fr);}.cal-grid{grid-template-columns:repeat(3,1fr);}.vr-stats{grid-template-columns:1fr 1fr;}}
 </style>
 </head>
 <body>
-
 <header>
   <div class="hdr-s"></div>
   <div class="hdr-b">
@@ -253,7 +230,6 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
   </div>
   <div class="hdr-bot"></div>
 </header>
-
 <div class="tabs">
   <button class="tab-btn active" onclick="showTab('s')">🪗 Mi Estado de Cuenta</button>
   <button class="tab-btn" onclick="showTab('a')">⚙️ Administrador</button>
@@ -282,16 +258,14 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
       <button class="at active" onclick="showAt('stats',this)">📊 Estadísticas</button>
       <button class="at" onclick="showAt('datos',this)">📂 Datos</button>
       <button class="at" onclick="showAt('cobro',this)">💳 Cobro</button>
+      <button class="at" onclick="showAt('vouchers',this)">🧾 Comprobantes</button>
       <button class="at" onclick="showAt('comun',this)">📢 Comunicaciones</button>
       <button class="at" onclick="showAt('cfg',this)">⚙️ Configuración</button>
     </div>
 
     <!-- ESTADÍSTICAS -->
     <div class="ap active" id="ap-stats">
-      <div class="sync-bar">
-        <span id="sync-admin-msg">Datos sincronizados con Google Sheets</span>
-        <button class="btn baz sm" onclick="sincronizarAdmin()">🔄 Sincronizar ahora</button>
-      </div>
+      <div class="sync-bar"><span id="sync-admin-msg">Datos sincronizados con Google Sheets</span><button class="btn baz sm" onclick="sincronizarAdmin()">🔄 Sincronizar ahora</button></div>
       <div id="sc"><div class="al ali">Cargando datos del club…</div></div>
     </div>
 
@@ -301,15 +275,13 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
         <div class="ct">🖼️ Logo del Club</div>
         <div class="lr">
           <div class="lps" id="lps">🐦</div><img id="logo-prev" alt="Logo"/>
-          <div>
-            <p style="font-size:.8rem;color:var(--M);margin-bottom:6px;font-style:italic;">Imagen del encabezado</p>
-            <label style="cursor:pointer;"><input type="file" accept="image/*" style="display:none" onchange="cLogo(this)"/><span class="btn bm sm">📁 Seleccionar</span></label>
-          </div>
+          <div><p style="font-size:.8rem;color:var(--M);margin-bottom:6px;font-style:italic;">Imagen del encabezado</p>
+          <label style="cursor:pointer;"><input type="file" accept="image/*" style="display:none" onchange="cLogo(this)"/><span class="btn bm sm">📁 Seleccionar</span></label></div>
         </div>
       </div>
-      <div class="card az" style="margin-bottom:12px;">
+      <div class="card az">
         <div class="ct" style="color:#1A3D8B;">🔗 Fuente de datos: Google Sheets</div>
-        <p style="font-size:.82rem;color:#2a4a8a;margin-bottom:11px;font-style:italic;line-height:1.6;">Los datos se cargan automáticamente desde tu hoja de Google Sheets. Para actualizar los datos, edita la hoja y presiona <strong>Sincronizar</strong>.</p>
+        <p style="font-size:.82rem;color:#2a4a8a;margin-bottom:11px;font-style:italic;line-height:1.6;">Los datos se cargan automáticamente desde Google Sheets. Para actualizar, edita la hoja y presiona <strong>Sincronizar</strong>.</p>
         <button class="btn baz" onclick="sincronizarAdmin()">🔄 Sincronizar Google Sheets</button>
         <div id="sync-datos-msg" style="margin-top:8px;"></div>
       </div>
@@ -342,30 +314,12 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
       </div>
       <div id="cobro-panel" style="display:none;">
         <div class="card m" style="padding-bottom:18px;">
-          <div class="cobro-hdr" id="cobro-hdr">
-            <div>
-              <div class="cobro-hdr-nom" id="cobro-nombre">—</div>
-              <div class="cobro-hdr-rut" id="cobro-rut4">RUT ···</div>
-            </div>
-            <div id="cobro-sem-badge"></div>
-          </div>
+          <div class="cobro-hdr"><div><div class="cobro-hdr-nom" id="cobro-nombre">—</div><div class="cobro-hdr-rut" id="cobro-rut4">RUT ···</div></div><div id="cobro-sem-badge"></div></div>
           <div class="sl2">☑️ Cuotas pendientes</div>
           <div class="cuota-list" id="cobro-cuotas"></div>
-          <div class="cobro-total-bar">
-            <div>
-              <div class="cbt-lbl">Total a cobrar</div>
-              <div class="cbt-sub" id="cobro-ncuotas">0 cuotas seleccionadas</div>
-            </div>
-            <div class="cbt-val" id="cobro-total">$ 0</div>
-          </div>
-          <div class="ig">
-            <label class="il">Forma de pago</label>
-            <select id="cobro-metodo">
-              <option value="Efectivo">💵 Efectivo</option>
-              <option value="Transferencia">🏦 Transferencia bancaria</option>
-              <option value="Débito">💳 Tarjeta de débito</option>
-              <option value="Cheque">📋 Cheque</option>
-            </select>
+          <div class="cobro-total-bar"><div><div class="cbt-lbl">Total a cobrar</div><div class="cbt-sub" id="cobro-ncuotas">0 cuotas</div></div><div class="cbt-val" id="cobro-total">$ 0</div></div>
+          <div class="ig"><label class="il">Forma de pago</label>
+            <select id="cobro-metodo"><option value="Efectivo">💵 Efectivo</option><option value="Transferencia">🏦 Transferencia bancaria</option><option value="Débito">💳 Tarjeta de débito</option><option value="Cheque">📋 Cheque</option></select>
           </div>
           <button class="btn bg" id="cobro-btn" onclick="registrarPagoMultiple()" style="width:100%;padding:13px;font-size:.95rem;margin-top:5px;">✅ Registrar Pago y Emitir Comprobante</button>
           <div id="cobro-msg" style="margin-top:8px;"></div>
@@ -373,19 +327,38 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
       </div>
     </div>
 
+    <!-- COMPROBANTES -->
+    <div class="ap" id="ap-vouchers">
+      <div id="vr-content"><div class="al ali">Cargando comprobantes…</div></div>
+    </div>
+
     <!-- COMUNICACIONES -->
     <div class="ap" id="ap-comun">
+      <div class="card" style="border-color:rgba(26,61,139,.2);">
+        <div class="ct" style="color:var(--R);">📌 Aviso para socios</div>
+        <div class="ig"><label class="il">Tipo de aviso</label>
+          <select id="av-tipo"><option value="info">📢 Informativo</option><option value="alerta">⚠️ Importante</option><option value="festivo">🎉 Festivo / Celebración</option></select>
+        </div>
+        <div class="ig"><label class="il">Mensaje</label>
+          <textarea id="av-txt" placeholder="Escribe aquí el aviso que verán todos los socios al consultar su estado de cuenta…" style="min-height:90px;"></textarea>
+        </div>
+        <div style="display:flex;align-items:center;gap:11px;margin-bottom:11px;padding:10px 13px;background:rgba(26,61,139,.05);border-radius:5px;border:1px solid rgba(26,61,139,.12);">
+          <input type="checkbox" id="av-on" style="width:18px;height:18px;flex:none;accent-color:var(--R);"/>
+          <label for="av-on" style="font-size:.85rem;font-weight:600;font-style:italic;color:var(--M);cursor:pointer;">Mostrar aviso actualmente a los socios</label>
+        </div>
+        <button class="btn br" onclick="guardarAviso()">💾 Guardar aviso</button>
+        <div id="av-msg"></div>
+      </div>
       <div class="card">
-        <div class="ct">📱 Mensaje de Cobro</div>
-        <div class="ig">
-          <label class="il">Seleccionar socio con deuda</label>
+        <div class="ct">📱 Mensaje de Cobro WhatsApp</div>
+        <div class="ig"><label class="il">Seleccionar socio con deuda</label>
           <select id="was" onchange="genWA()"><option value="">— Selecciona un socio —</option></select>
         </div>
         <div id="wap-area" style="display:none;">
           <div class="wap-box" id="wam"></div>
           <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:3px;">
             <button class="btn bcp sm" onclick="copiarMsg(this,'wam','wam-fb')">📋 Copiar mensaje</button>
-            <span class="copy-feedback" id="wam-fb">✅ Copiado al portapapeles</span>
+            <span class="copy-feedback" id="wam-fb">✅ Copiado</span>
           </div>
         </div>
         <div id="waempty" class="al ali" style="margin-top:9px;display:none;">Cargando socios…</div>
@@ -402,15 +375,15 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
     <div class="ap" id="ap-cfg">
       <div class="card m">
         <div class="ct">🏛️ Datos del Club</div>
-        <div class="ig"><label class="il">Nombre del Club</label><input type="text" id="cn" placeholder="Nombre del club"/></div>
-        <div class="ig"><label class="il">Subtítulo</label><input type="text" id="cs" placeholder="Club de Cuecas — Deportivo…"/></div>
-        <div class="ig"><label class="il">Lema</label><input type="text" id="cl" placeholder="Fundado en la Tradición Chilena"/></div>
-        <div class="ig"><label class="il">Dirección</label><input type="text" id="cd" placeholder="Dirección del club"/></div>
-        <div class="ig"><label class="il">Teléfono general</label><input type="tel" id="ct2" placeholder="+56 9 1234 5678"/></div>
-        <div class="ig"><label class="il">💬 Número de contacto Tesorería</label><input type="tel" id="ctes" placeholder="+56912345678"/></div>
-        <div class="ig"><label class="il">📧 Correo electrónico</label><input type="email" id="ccorreo" placeholder="tesoreria@mipicaflor.cl"/></div>
-        <div class="ig"><label class="il">🏦 Datos bancarios para transferencia</label><input type="text" id="cbco" placeholder="Banco Estado · Cta Cte 123456789 · RUT…"/></div>
-        <div class="ig"><label class="il">💰 Valor cuota mensual ($)</label><input type="number" id="cvc" placeholder="5000" min="1" step="500"/></div>
+        <div class="ig"><label class="il">Nombre del Club</label><input type="text" id="cn"/></div>
+        <div class="ig"><label class="il">Subtítulo</label><input type="text" id="cs"/></div>
+        <div class="ig"><label class="il">Lema</label><input type="text" id="cl"/></div>
+        <div class="ig"><label class="il">Dirección</label><input type="text" id="cd"/></div>
+        <div class="ig"><label class="il">Teléfono general</label><input type="tel" id="ct2"/></div>
+        <div class="ig"><label class="il">💬 Teléfono Tesorería</label><input type="tel" id="ctes"/></div>
+        <div class="ig"><label class="il">📧 Correo electrónico</label><input type="email" id="ccorreo"/></div>
+        <div class="ig"><label class="il">🏦 Datos bancarios para transferencia</label><input type="text" id="cbco"/></div>
+        <div class="ig"><label class="il">💰 Valor cuota mensual ($)</label><input type="number" id="cvc" min="1" step="500"/></div>
         <button class="btn bm" onclick="gCfg()" style="margin-top:5px;">💾 Guardar configuración</button>
         <div id="cfgmsg"></div>
       </div>
@@ -421,7 +394,7 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
         <div id="temamsg"></div>
       </div>
       <div class="card" style="border-color:rgba(139,26,26,.18);">
-        <div class="ct" style="color:var(--R);">🔑 Cambiar contraseña</div>
+        <div class="ct" style="color:#8B1A1A;">🔑 Cambiar contraseña</div>
         <div class="ig"><label class="il">Contraseña actual</label><input type="password" id="pa"/></div>
         <div class="ig"><label class="il">Nueva contraseña</label><input type="password" id="pn" placeholder="Mín. 6 caracteres"/></div>
         <div class="ig"><label class="il">Confirmar nueva</label><input type="password" id="pc"/></div>
@@ -436,38 +409,21 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
 <div class="modal-ov" id="modal" onclick="if(event.target===this)cerrarModal()">
   <div class="modal-box">
     <div class="modal-tit">💳 Registrar Pago de Cuota</div>
-    <div class="modal-info">
-      <span class="mi-nom" id="mi-nom">—</span>
-      <span>Período: <strong id="mi-per">—</strong></span><br>
-      <span>Monto: <strong id="mi-mto" style="color:var(--R);">—</strong></span>
-    </div>
+    <div class="modal-info"><span class="mi-nom" id="mi-nom">—</span><span>Período: <strong id="mi-per">—</strong></span><br><span>Monto: <strong id="mi-mto">—</strong></span></div>
     <div class="radio-g">
-      <label class="radio-o"><input type="radio" name="fpm" value="Efectivo" checked/>
-        <div><div class="ro-l">💵 Efectivo</div><div class="ro-d">Pago en mano al tesorero/a</div></div></label>
-      <label class="radio-o"><input type="radio" name="fpm" value="Transferencia"/>
-        <div><div class="ro-l">🏦 Transferencia bancaria</div><div class="ro-d">Pago electrónico</div></div></label>
+      <label class="radio-o"><input type="radio" name="fpm" value="Efectivo" checked/><div><div class="ro-l">💵 Efectivo</div><div class="ro-d">Pago en mano al tesorero/a</div></div></label>
+      <label class="radio-o"><input type="radio" name="fpm" value="Transferencia"/><div><div class="ro-l">🏦 Transferencia bancaria</div><div class="ro-d">Pago electrónico</div></div></label>
     </div>
-    <div class="modal-btns">
-      <button class="btn bg" style="flex:1;" onclick="confirmarPago()">✅ Confirmar pago</button>
-      <button class="btn bgr sm" onclick="cerrarModal()">Cancelar</button>
-    </div>
+    <div class="modal-btns"><button class="btn bg" style="flex:1;" onclick="confirmarPago()">✅ Confirmar pago</button><button class="btn bgr sm" onclick="cerrarModal()">Cancelar</button></div>
   </div>
 </div>
-
 <div class="modal-ov" id="modal-del" onclick="if(event.target===this)document.getElementById('modal-del').classList.remove('open')">
   <div class="modal-box">
-    <div class="modal-tit" style="color:var(--R);">🗑️ Confirmar eliminación</div>
-    <div class="modal-info" style="border-color:var(--R);">
-      <strong style="color:var(--R);">¿Borrar todos los datos locales?</strong><br>
-      Los datos de Google Sheets se volverán a cargar automáticamente.
-    </div>
-    <div class="modal-btns">
-      <button class="btn br" style="flex:1;" onclick="borrar()">🗑️ Sí, borrar caché local</button>
-      <button class="btn bgr sm" onclick="document.getElementById('modal-del').classList.remove('open')">Cancelar</button>
-    </div>
+    <div class="modal-tit" style="color:#8B1A1A;">🗑️ Confirmar eliminación</div>
+    <div class="modal-info" style="border-color:#8B1A1A;"><strong style="color:#8B1A1A;">¿Borrar todos los datos locales?</strong><br>Los datos de Google Sheets se volverán a cargar automáticamente.</div>
+    <div class="modal-btns"><button class="btn br" style="flex:1;" onclick="borrar()">🗑️ Sí, borrar caché</button><button class="btn bgr sm" onclick="document.getElementById('modal-del').classList.remove('open')">Cancelar</button></div>
   </div>
 </div>
-
 <div class="modal-ov" id="modal-voucher" onclick="if(event.target===this)document.getElementById('modal-voucher').classList.remove('open')">
   <div class="modal-box" style="max-width:400px;">
     <div class="modal-tit">🧾 Comprobante de Pago</div>
@@ -481,73 +437,71 @@ tr:nth-child(even) td{background:rgba(92,58,30,.03);}
 </div>
 
 <script>
-// ══════════════════════════════════════════════
-//  GOOGLE SHEETS — URLs de las hojas publicadas
-// ══════════════════════════════════════════════
+// ══ GOOGLE SHEETS ══
 const SHEET_URLS=[
   {url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-Z0c9TccRuXf6xDQRjP7a7ji5GMVm3Qw7tFhALaU8fO-wBNbcNWTZRgul4VxHm4wTQ8sSC7YC4drS/pub?gid=1404454514&single=true&output=csv',anio:2025},
   {url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-Z0c9TccRuXf6xDQRjP7a7ji5GMVm3Qw7tFhALaU8fO-wBNbcNWTZRgul4VxHm4wTQ8sSC7YC4drS/pub?gid=0&single=true&output=csv',anio:2026}
 ];
 
-// ══════════════════════════════════════════════
-//  ESTADO GLOBAL
-// ══════════════════════════════════════════════
-let datos=[],sheetsLoaded=false,cobroNS=null,pendingPayIdx=null,lastVoucherText='',tSel='rojo';
-let cfg={nombre:'A Compás de Picaflor',sub:'Club de Cuecas — Deportivo — Social — Cultural y Recreativo',lema:'Fundado en la Tradición Chilena',dir:'',tel:'',telTes:'',correo:'',banco:'',claveHash:'',tema:'rojo',valorCuota:5000};
+// ══ ESTADO GLOBAL ══
+let datos=[],sheetsLoaded=false,cobroNS=null,pendingPayIdx=null,lastVoucherText='',tSel='azul';
+let aviso={texto:'',activo:false,tipo:'info'};
+let vouchers=[];
+let cfg={
+  nombre:'A Compás de Picaflor',
+  sub:'Club de Cuecas — Deportivo — Social — Cultural y Recreativo',
+  lema:'Fundado en la Tradición Chilena',
+  dir:'',tel:'',
+  telTes:'+56988096934',
+  correo:'jad2320@gmail.com',
+  banco:'Juan Acevedo Diaz - 10745673-2 - Banco de Chile - Cuenta Vista - 16-99240-94 - jad2320@gmail.com',
+  claveHash:'',tema:'azul',valorCuota:5000
+};
 const DEFAULT_PW='picaflor2025';
 const MESC=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-const MES_ABR=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const MA=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const HOY=new Date(),HY=HOY.getFullYear(),HM=HOY.getMonth();
-const TEMAS={rojo:{R:'#8B1A1A',RL:'#B02525',M:'#5C3A1E',MD:'#3A2210',O:'#C8942A',OL:'#E8B84B',label:'Rojo Tradicional'},azul:{R:'#1A3D8B',RL:'#2550B0',M:'#1E3A5C',MD:'#102235',O:'#C8942A',OL:'#E8B84B',label:'Azul Marino'},verde:{R:'#1A6B2A',RL:'#228B36',M:'#2A5C1E',MD:'#183510',O:'#C8942A',OL:'#E8B84B',label:'Verde Campaña'},cafe:{R:'#6B3A1A',RL:'#8B4A25',M:'#3A2A1E',MD:'#221810',O:'#C8942A',OL:'#E8B84B',label:'Café Andino'}};
+const TEMAS={
+  rojo:{R:'#8B1A1A',RL:'#B02525',M:'#5C3A1E',MD:'#3A2210',O:'#C8942A',OL:'#E8B84B',label:'Rojo Tradicional'},
+  azul:{R:'#1A3D8B',RL:'#2550B0',M:'#1E3A5C',MD:'#102235',O:'#C8942A',OL:'#E8B84B',label:'Azul Marino'},
+  verde:{R:'#1A6B2A',RL:'#228B36',M:'#2A5C1E',MD:'#183510',O:'#C8942A',OL:'#E8B84B',label:'Verde Campaña'},
+  cafe:{R:'#6B3A1A',RL:'#8B4A25',M:'#3A2A1E',MD:'#221810',O:'#C8942A',OL:'#E8B84B',label:'Café Andino'}
+};
 
-// ══════════════════════════════════════════════
-//  STORAGE (localStorage)
-// ══════════════════════════════════════════════
+// ══ STORAGE ══
 async function sG(k){try{return localStorage.getItem(k);}catch(e){return null;}}
 async function sS(k,v){try{localStorage.setItem(k,v);return true;}catch(e){return null;}}
 async function sD(k){try{localStorage.removeItem(k);return true;}catch(e){return null;}}
 
-let aviso={texto:'',activo:false,tipo:'info'};
+// ══ AVISO ══
+let aviso_loaded=false;
 async function guardarAviso(){
-  const txt=document.getElementById('av-txt');
-  const on=document.getElementById('av-on');
-  const tipo=document.getElementById('av-tipo');
-  if(txt)aviso.texto=txt.value.trim();
-  if(on)aviso.activo=on.checked;
-  if(tipo)aviso.tipo=tipo.value;
-  await sS('pf_aviso',JSON.stringify(aviso));
-  renderPanelPublico(true);
+  const txt=document.getElementById('av-txt');const on=document.getElementById('av-on');const tipo=document.getElementById('av-tipo');
+  if(txt)aviso.texto=txt.value.trim();if(on)aviso.activo=on.checked;if(tipo)aviso.tipo=tipo.value;
+  await sS('pf_aviso',JSON.stringify(aviso));renderPanelPublico(true);
   const m=document.getElementById('av-msg');
   if(m){m.innerHTML='<div class="al alo">✅ Aviso guardado. Ya visible para los socios.</div>';setTimeout(()=>m.innerHTML='',3500);}
 }
 
-// ══════════════════════════════════════════════
-//  GOOGLE SHEETS — carga y sincronización
-// ══════════════════════════════════════════════
+// ══ SHEETS ══
 async function cargarDesdeSheets(silencioso=false){
   let nuevos=[],err=0;
   for(const s of SHEET_URLS){
     try{
-      const r=await fetch(s.url);
-      if(!r.ok)throw new Error(r.status);
+      const r=await fetch(s.url);if(!r.ok)throw new Error(r.status);
       const txt=await r.text();
       const res=Papa.parse(txt,{header:true,skipEmptyLines:true,transformHeader:h=>h.trim()});
       res.data.forEach(row=>{
         const ks=Object.keys(row);
         const nsK=ks.find(k=>/n.?socio|rut|numero|^socio$|^id$/i.test(k.replace(/[\s_]/g,'')));
         const nomK=ks.find(k=>/^nombre|^name/i.test(k.trim()));
-        const ns=nsK?String(row[nsK]??'').trim():'';
-        const nom=nomK?String(row[nomK]??'').trim():'';
+        const ns=nsK?String(row[nsK]??'').trim():'';const nom=nomK?String(row[nomK]??'').trim():'';
         if(!ns||ns==='-'||ns==='--'||ns==='N_Socio')return;
         MESC.forEach((mes,idx)=>{
           const mesK=ks.find(k=>k.trim()===mes);if(!mesK)return;
-          const val=String(row[mesK]??'').trim();
-          const ne=normEst(val);
-          let est;
-          if(ne!==null){est=ne;}
-          else{const ep=(s.anio<HY)||(s.anio===HY&&idx<=HM);est=ep?'Impago':null;}
+          const val=String(row[mesK]??'').trim();const ne=normEst(val);
+          let est;if(ne!==null){est=ne;}else{const ep=(s.anio<HY)||(s.anio===HY&&idx<=HM);est=ep?'Impago':null;}
           if(est===null)return;
           nuevos.push({n_socio:ns,nombre:nom,anio:s.anio,periodo:`${mes} ${s.anio}`,estado:est});
         });
@@ -556,125 +510,72 @@ async function cargarDesdeSheets(silencioso=false){
   }
   sheetsLoaded=true;
   if(nuevos.length){
-    const pri={pagado:3,noapli:2,impago:1,sd:0};
-    const dm2={};
-    // Preservar pagos registrados localmente en la app
+    const pri={pagado:3,noapli:2,impago:1,sd:0};const dm2={};
     const loc=datos.filter(d=>d.formaPago);
-    [...nuevos,...loc].forEach(d=>{
-      const k=`${d.n_socio}|${d.periodo}`;
-      if(!dm2[k]||(pri[tipoE(d.estado)]||0)>(pri[tipoE(dm2[k].estado)]||0))dm2[k]=d;
-    });
-    datos=Object.values(dm2);
-    await guardarSilencioso();
+    [...nuevos,...loc].forEach(d=>{const k=`${d.n_socio}|${d.periodo}`;if(!dm2[k]||(pri[tipoE(d.estado)]||0)>(pri[tipoE(dm2[k].estado)]||0))dm2[k]=d;});
+    datos=Object.values(dm2);await guardarSilencioso();
   }
   return{n:nuevos.length,err};
 }
-
 async function sincronizarAdmin(){
-  const m1=document.getElementById('sync-admin-msg');
-  const m2=document.getElementById('sync-datos-msg');
-  if(m1)m1.textContent='⏳ Sincronizando…';
-  if(m2)m2.innerHTML='<div class="al ali">⏳ Sincronizando con Google Sheets…</div>';
+  const m1=document.getElementById('sync-admin-msg'),m2=document.getElementById('sync-datos-msg');
+  if(m1)m1.textContent='⏳ Sincronizando…';if(m2)m2.innerHTML='<div class="al ali">⏳ Sincronizando…</div>';
   const{n,err}=await cargarDesdeSheets(true);
   rTabla();rStats();mostrarResBanner();
   const nS=[...new Set(datos.map(d=>d.n_socio))].length;
-  const msg=err===SHEET_URLS.length?'❌ Sin conexión — verifica tu red':n>0?`✅ ${nS} socios cargados — última sync: ${HOY.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})}`:'✅ Sin cambios';
-  if(m1){m1.textContent=msg;}
-  if(m2){m2.innerHTML=err===SHEET_URLS.length?'<div class="al ale">❌ No se pudo conectar con Google Sheets.</div>':'<div class="al alo">'+msg+'</div>';setTimeout(()=>m2.innerHTML='',5000);}
+  const msg=err===SHEET_URLS.length?'❌ Sin conexión':n>0?`✅ ${nS} socios · ${HOY.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})}`:'✅ Sin cambios';
+  if(m1)m1.textContent=msg;
+  if(m2){m2.innerHTML=err===SHEET_URLS.length?'<div class="al ale">❌ Sin conexión.</div>':`<div class="al alo">${msg}</div>`;setTimeout(()=>m2.innerHTML='',5000);}
 }
 
-// ══════════════════════════════════════════════
-//  HELPERS
-// ══════════════════════════════════════════════
+// ══ HELPERS ══
 function nRut(r){return String(r).replace(/[.\-\s]/g,'').toUpperCase().replace(/K/g,'0').replace(/[^0-9]/g,'');}
 function u4(r){return nRut(r).slice(-4);}
-function pPer(s,fallbackAnio){
-  if(!s)return null;
-  const l=String(s).toLowerCase().trim();
-  for(let i=0;i<MES.length;i++){if(l.includes(MES[i])){const m=l.match(/\d{4}/);const anio=m?parseInt(m[0]):(fallbackAnio||null);if(anio)return{mes:i,anio};}}
-  return null;
-}
+function pPer(s,fa){if(!s)return null;const l=String(s).toLowerCase().trim();for(let i=0;i<MES.length;i++){if(l.includes(MES[i])){const m=l.match(/\d{4}/);const anio=m?parseInt(m[0]):(fa||null);if(anio)return{mes:i,anio};}}return null;}
 function getPer(d){return pPer(d.periodo,d.anio);}
 function pLabel(d){const p=getPer(d);return p?`${MESC[p.mes]} ${p.anio}`:(d.periodo||'—');}
 function esPas(p){if(!p)return false;return(p.anio<HY)||(p.anio===HY&&p.mes<=HM);}
 function fmt(m){if(m===undefined||m===null)return'—';const n=parseFloat(String(m).replace(/[^0-9.-]/g,''));return isNaN(n)?String(m):'$ '+n.toLocaleString('es-CL');}
 function vc(){return Number(cfg.valorCuota)||5000;}
 function tipoE(e){
-  const s=(e||'').toLowerCase().trim().replace(/[\s\/\-\.]/g,'');
-  if(!s)return'sd';
-  if(s==='na'||s==='#na'||s.startsWith('noaplic')||s==='nc'||s==='nocorresponde'||s==='receso'||s==='exento'||s==='eximido')return'noapli';
+  const s=(e||'').toLowerCase().trim().replace(/[\s\/\-\.]/g,'');if(!s)return'sd';
+  if(s==='na'||s==='#na'||s.startsWith('noaplic')||s==='nc'||s==='receso'||s==='exento'||s==='eximido')return'noapli';
   if(s.startsWith('pag')||s.startsWith('cancel')||s==='si'||s==='sí'||s==='ok'||s==='✓'||s==='true'||s==='1'||s==='p')return'pagado';
   if(s.startsWith('imp')||s==='i'||s==='no'||s==='n'||s==='x'||s==='-'||s==='0'||s==='false'||s==='pendiente'||s==='debe')return'impago';
   return'sd';
 }
-function normEst(val){
-  const v=String(val??'').trim();if(!v)return null;
-  const t=tipoE(v);
-  if(t==='noapli')return'NoAplica';if(t==='pagado')return'Pagado';if(t==='impago')return'Impago';
-  return null;
-}
+function normEst(val){const v=String(val??'').trim();if(!v)return null;const t=tipoE(v);if(t==='noapli')return'NoAplica';if(t==='pagado')return'Pagado';if(t==='impago')return'Impago';return null;}
 function esImpagoPasado(d){if(tipoE(d.estado)==='pagado'||tipoE(d.estado)==='noapli')return false;return esPas(getPer(d));}
 function getSem(n){if(n===0)return{cls:'sem-v',ico:'🟢',txt:'Al día'};if(n<=2)return{cls:'sem-a',ico:'🟡',txt:'Mora leve'};return{cls:'sem-r',ico:'🔴',txt:'Moroso/a'};}
 
-// ══════════════════════════════════════════════
-//  LOGO
-// ══════════════════════════════════════════════
-function comprimirImg(src,cb,maxW=300,q=0.78){
-  const img=new Image(),c=document.createElement('canvas');
-  img.onload=()=>{const r=Math.min(1,maxW/img.width);c.width=Math.round(img.width*r);c.height=Math.round(img.height*r);c.getContext('2d').drawImage(img,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',q));};
-  img.onerror=()=>cb(src);img.src=src;
-}
-function aplLogo(src){
-  const li=document.getElementById('logo-img');li.src=src;li.style.display='block';
-  document.getElementById('logo-ph').style.display='none';
-  document.getElementById('lps').style.display='none';
-  const lp=document.getElementById('logo-prev');lp.src=src;lp.style.display='block';
-}
+// ══ LOGO ══
+function comprimirImg(src,cb,maxW=300,q=0.78){const img=new Image(),c=document.createElement('canvas');img.onload=()=>{const r=Math.min(1,maxW/img.width);c.width=Math.round(img.width*r);c.height=Math.round(img.height*r);c.getContext('2d').drawImage(img,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',q));};img.onerror=()=>cb(src);img.src=src;}
+function aplLogo(src){const li=document.getElementById('logo-img');li.src=src;li.style.display='block';document.getElementById('logo-ph').style.display='none';document.getElementById('lps').style.display='none';const lp=document.getElementById('logo-prev');lp.src=src;lp.style.display='block';}
 function cLogo(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=e=>comprimirImg(e.target.result,async c=>{aplLogo(c);await sS('pf_logo',c);});r.readAsDataURL(f);}
 
-// ══════════════════════════════════════════════
-//  HEADER & TEMA
-// ══════════════════════════════════════════════
-function updHdr(){
-  document.getElementById('hdr-t').textContent=cfg.nombre||'A Compás de Picaflor';
-  document.getElementById('hdr-s').textContent=cfg.sub||'';
-  document.getElementById('hdr-l').textContent=cfg.lema||'';
-  document.title=(cfg.nombre||'Club de Cuecas')+' — Estado de Cuenta';
-}
-function apTemaCSS(t){const tm=TEMAS[t]||TEMAS.rojo;const s=document.documentElement.style;['R','RL','M','MD','O','OL'].forEach(k=>s.setProperty('--'+k,tm[k]));}
+// ══ HEADER & TEMA ══
+function updHdr(){document.getElementById('hdr-t').textContent=cfg.nombre||'A Compás de Picaflor';document.getElementById('hdr-s').textContent=cfg.sub||'';document.getElementById('hdr-l').textContent=cfg.lema||'';document.title=(cfg.nombre||'Club de Cuecas')+' — Estado de Cuenta';}
+function apTemaCSS(t){const tm=TEMAS[t]||TEMAS.azul;const s=document.documentElement.style;['R','RL','M','MD','O','OL'].forEach(k=>s.setProperty('--'+k,tm[k]));}
 function rTGrid(){
   const g=document.getElementById('tgrid');g.innerHTML='';
-  Object.entries(TEMAS).forEach(([k,tm])=>{
-    const d=document.createElement('div');d.className='to2'+(k===tSel?' sel':'');
-    d.onclick=()=>{tSel=k;document.querySelectorAll('.to2').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');apTemaCSS(k);};
-    d.innerHTML=`<div class="ts"><div class="ta" style="background:${tm.R}"></div><div class="tb" style="background:${tm.M}"></div><div class="tc" style="background:${tm.O}"></div></div>${tm.label}`;
-    g.appendChild(d);
-  });
+  Object.entries(TEMAS).forEach(([k,tm])=>{const d=document.createElement('div');d.className='to2'+(k===tSel?' sel':'');d.onclick=()=>{tSel=k;document.querySelectorAll('.to2').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');apTemaCSS(k);};d.innerHTML=`<div class="ts"><div class="ta" style="background:${tm.R}"></div><div class="tb" style="background:${tm.M}"></div><div class="tc" style="background:${tm.O}"></div></div>${tm.label}`;g.appendChild(d);});
 }
 async function apTema(){cfg.tema=tSel;await sS('pf_cfg',JSON.stringify(cfg));const m=document.getElementById('temamsg');m.innerHTML='<div class="al alo">✅ Tema aplicado.</div>';setTimeout(()=>m.innerHTML='',3000);}
 
-// ══════════════════════════════════════════════
-//  TABS
-// ══════════════════════════════════════════════
-function showTab(t){
-  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',(t==='s'&&i===0)||(t==='a'&&i===1)));
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('panel-'+t).classList.add('active');
-}
+// ══ TABS ══
+function showTab(t){document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',(t==='s'&&i===0)||(t==='a'&&i===1)));document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.getElementById('panel-'+t).classList.add('active');}
 function showAt(t,btn){
-  document.querySelectorAll('.at').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.ap').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.at').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.ap').forEach(p=>p.classList.remove('active'));
   btn.classList.add('active');document.getElementById('ap-'+t).classList.add('active');
   if(t==='stats')rStats();
   if(t==='datos'&&datos.length){document.getElementById('dcard').style.display='block';rTabla();mostrarResBanner();}
   if(t==='cobro')initCobro();
-  if(t==='comun')pobWA();
+  if(t==='vouchers')rVouchers();
+  if(t==='comun'){pobWA();pobAviso();}
   if(t==='cfg'){pCfgForm();rTGrid();}
 }
 
-// ══════════════════════════════════════════════
-//  AUTH
-// ══════════════════════════════════════════════
+// ══ AUTH ══
 async function hashPw(pw){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pw));return[...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');}
 async function login(){
   const hash=await hashPw(document.getElementById('pwi').value);
@@ -682,8 +583,7 @@ async function login(){
   else{document.getElementById('pwe').innerHTML='<div class="al ale">❌ Contraseña incorrecta</div>';document.getElementById('pwi').value='';}
 }
 async function camPw(){
-  const m=document.getElementById('pwmsg');
-  const aHash=await hashPw(document.getElementById('pa').value);
+  const m=document.getElementById('pwmsg');const aHash=await hashPw(document.getElementById('pa').value);
   if(aHash!==cfg.claveHash){m.innerHTML='<div class="al ale">❌ Contraseña actual incorrecta.</div>';return;}
   const n=document.getElementById('pn').value,c=document.getElementById('pc').value;
   if(n.length<6){m.innerHTML='<div class="al ale">❌ Mínimo 6 caracteres.</div>';return;}
@@ -692,9 +592,7 @@ async function camPw(){
   m.innerHTML='<div class="al alo">✅ Contraseña cambiada.</div>';['pa','pn','pc'].forEach(id=>document.getElementById(id).value='');setTimeout(()=>m.innerHTML='',4000);
 }
 
-// ══════════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════════
+// ══ INIT ══
 async function init(){
   document.getElementById('fh').textContent=`Consulta al ${HOY.getDate()} de ${MESC[HM]} de ${HY}`;
   const sc=await sG('pf_cfg');if(sc){try{Object.assign(cfg,JSON.parse(sc));}catch(e){}}
@@ -702,51 +600,24 @@ async function init(){
   const sl=await sG('pf_logo');if(sl)aplLogo(sl);
   const sd=await sG('pf_datos');if(sd){try{datos=JSON.parse(sd);}catch(e){datos=[];}}
   const sav=await sG('pf_aviso');if(sav){try{Object.assign(aviso,JSON.parse(sav));}catch(e){}}
-  apTemaCSS(cfg.tema||'rojo');tSel=cfg.tema||'rojo';updHdr();rTGrid();
-  // Mostrar pantalla de carga si no hay datos en cache
-  renderPanelPublico(false);
-  // Cargar desde Google Sheets
-  cargarDesdeSheets(datos.length>0).then(({n,err})=>{
-    renderPanelPublico(true);
-    if(n>0)rStats();
-  });
+  const sv=await sG('pf_vouchers');if(sv){try{vouchers=JSON.parse(sv);}catch(e){vouchers=[];}}
+  apTemaCSS(cfg.tema||'azul');tSel=cfg.tema||'azul';updHdr();rTGrid();
+  renderPanelPublico(datos.length>0);
+  cargarDesdeSheets(datos.length>0).then(({n})=>{renderPanelPublico(true);if(n>0)rStats();});
 }
 init();
 
-// ══════════════════════════════════════════════
-//  PANEL PÚBLICO
-// ══════════════════════════════════════════════
+// ══ PANEL PÚBLICO ══
 function renderPanelPublico(listo){
   const c=document.getElementById('pub-content');
-  if(!listo&&!datos.length){
-    c.innerHTML=`
-    <div style="margin-top:13px;border-radius:14px;overflow:hidden;border:1px solid rgba(200,148,42,.2);box-shadow:0 8px 32px rgba(44,24,16,.18);">
-      <div style="background:linear-gradient(160deg,var(--MD),var(--M));padding:32px 20px;text-align:center;">
-        <div style="font-size:3rem;margin-bottom:10px;animation:spin 1.8s linear infinite;display:inline-block;">🪗</div>
-        <div style="font-family:var(--FD);font-size:1rem;font-style:italic;color:var(--OL);">Cargando datos del club…</div>
-        <div style="font-size:.73rem;color:rgba(237,224,196,.55);margin-top:4px;font-style:italic;">Conectando con Google Sheets</div>
-      </div>
-    </div>`;
-    return;
-  }
-  const liEl=document.getElementById('logo-img');
-  const hasLogo=liEl&&liEl.style.display!=='none'&&liEl.src&&!liEl.src.endsWith('/');
-  const logoHTML=hasLogo
-    ?`<img src="${liEl.src}" alt="Logo" style="width:88px;height:88px;border-radius:50%;object-fit:contain;border:3px solid rgba(200,148,42,.45);box-shadow:0 6px 24px rgba(44,24,16,.35);background:rgba(0,0,0,.18);">`
-    :`<div style="width:88px;height:88px;border-radius:50%;background:rgba(255,255,255,.1);border:3px solid rgba(200,148,42,.45);display:flex;align-items:center;justify-content:center;font-size:2.8rem;box-shadow:0 6px 24px rgba(44,24,16,.35);">🐦</div>`;
+  if(!listo&&!datos.length){c.innerHTML=`<div class="loading-card" style="border-radius:14px;margin-top:13px;"><span class="loading-ico">🪗</span><div class="loading-txt">Cargando datos del club…</div><div class="loading-sub">Conectando con Google Sheets</div></div>`;return;}
+  const liEl=document.getElementById('logo-img');const hasLogo=liEl&&liEl.style.display!=='none'&&liEl.src&&!liEl.src.endsWith('/');
+  const logoHTML=hasLogo?`<img src="${liEl.src}" alt="Logo" style="width:88px;height:88px;border-radius:50%;object-fit:contain;border:3px solid rgba(200,148,42,.45);box-shadow:0 6px 24px rgba(16,34,53,.35);background:rgba(0,0,0,.18);">`:`<div style="width:88px;height:88px;border-radius:50%;background:rgba(255,255,255,.1);border:3px solid rgba(200,148,42,.45);display:flex;align-items:center;justify-content:center;font-size:2.8rem;box-shadow:0 6px 24px rgba(16,34,53,.35);">🐦</div>`;
   let statsBadge='';
-  if(datos.length){
-    const nS=[...new Set(datos.map(d=>d.n_socio))].length;
-    const dm2={};datos.forEach(d=>{if(!dm2[d.n_socio])dm2[d.n_socio]=0;if(esImpagoPasado(d))dm2[d.n_socio]++;});
-    const alDia=Object.values(dm2).filter(v=>v===0).length;
-    statsBadge=`<div style="display:inline-flex;gap:14px;background:rgba(255,255,255,.09);border:1px solid rgba(200,148,42,.28);border-radius:30px;padding:7px 18px;font-size:.74rem;color:rgba(237,224,196,.85);margin-top:14px;">
-      <span>👥 <strong style="color:var(--OL);">${nS}</strong> socios</span>
-      <span style="opacity:.35;">|</span>
-      <span>✅ <strong style="color:var(--OL);">${alDia}</strong> al día</span>
-    </div>`;
-  }
+  if(datos.length){const nS=[...new Set(datos.map(d=>d.n_socio))].length;const dm2={};datos.forEach(d=>{if(!dm2[d.n_socio])dm2[d.n_socio]=0;if(esImpagoPasado(d))dm2[d.n_socio]++;});const alDia=Object.values(dm2).filter(v=>v===0).length;statsBadge=`<div style="display:inline-flex;gap:14px;background:rgba(255,255,255,.09);border:1px solid rgba(200,148,42,.28);border-radius:30px;padding:7px 18px;font-size:.74rem;color:rgba(237,224,196,.85);margin-top:14px;"><span>👥 <strong style="color:var(--OL);">${nS}</strong> socios</span><span style="opacity:.35;">|</span><span>✅ <strong style="color:var(--OL);">${alDia}</strong> al día</span></div>`;}
+  const avisoHTML=aviso.activo&&aviso.texto?`<div style="border-radius:12px;padding:15px 16px;margin-top:12px;border:1.5px solid ${aviso.tipo==='alerta'?'rgba(200,148,42,.4)':aviso.tipo==='festivo'?'rgba(39,174,96,.3)':'rgba(26,61,139,.25)'};background:${aviso.tipo==='alerta'?'rgba(200,148,42,.08)':aviso.tipo==='festivo'?'rgba(39,174,96,.07)':'rgba(26,61,139,.07)'};position:relative;overflow:hidden;"><div style="position:absolute;top:0;left:0;bottom:0;width:4px;background:${aviso.tipo==='alerta'?'var(--O)':aviso.tipo==='festivo'?'#27ae60':'var(--R)'};"></div><div style="padding-left:10px;"><div style="font-family:var(--FD);font-size:.88rem;font-weight:700;font-style:italic;color:${aviso.tipo==='alerta'?'var(--MD)':aviso.tipo==='festivo'?'#1a6b35':'var(--R)'};margin-bottom:5px;">${aviso.tipo==='alerta'?'⚠️':aviso.tipo==='festivo'?'🎉':'📢'} Aviso del club</div><div style="font-size:.84rem;color:var(--T);line-height:1.65;white-space:pre-wrap;">${aviso.texto}</div></div></div>`:'';
   c.innerHTML=`
-  <div style="background:linear-gradient(160deg,var(--MD),var(--M));border-radius:14px;padding:32px 20px 26px;text-align:center;margin-top:13px;border:1px solid rgba(200,148,42,.2);box-shadow:0 8px 32px rgba(44,24,16,.2);position:relative;overflow:hidden;">
+  <div style="background:linear-gradient(160deg,var(--MD),var(--M));border-radius:14px;padding:32px 20px 26px;text-align:center;margin-top:13px;border:1px solid rgba(200,148,42,.2);box-shadow:0 8px 32px rgba(16,34,53,.2);position:relative;overflow:hidden;">
     <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--R),var(--O),var(--R),var(--O));"></div>
     <div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,transparent,transparent 40px,rgba(200,148,42,.03) 40px,rgba(200,148,42,.03) 80px);pointer-events:none;"></div>
     <div style="display:flex;justify-content:center;margin-bottom:14px;">${logoHTML}</div>
@@ -754,16 +625,8 @@ function renderPanelPublico(listo){
     <div style="font-size:.77rem;color:rgba(237,224,196,.65);font-style:italic;">${cfg.sub||'Club de Cuecas'}</div>
     ${statsBadge}
   </div>
-
-  ${aviso.activo&&aviso.texto?`<div style="border-radius:12px;padding:15px 16px;margin-top:12px;border:1.5px solid ${aviso.tipo==='alerta'?'rgba(200,148,42,.4)':aviso.tipo==='festivo'?'rgba(39,174,96,.3)':'rgba(26,61,139,.25)'};background:${aviso.tipo==='alerta'?'rgba(200,148,42,.08)':aviso.tipo==='festivo'?'rgba(39,174,96,.07)':'rgba(26,61,139,.07)'};position:relative;overflow:hidden;">
-    <div style="position:absolute;top:0;left:0;bottom:0;width:4px;background:${aviso.tipo==='alerta'?'var(--O)':aviso.tipo==='festivo'?'#27ae60':'#1A3D8B'};border-radius:0;"></div>
-    <div style="padding-left:10px;">
-      <div style="font-family:var(--FD);font-size:.88rem;font-weight:700;font-style:italic;color:${aviso.tipo==='alerta'?'var(--MD)':aviso.tipo==='festivo'?'#1a6b35':'#1A3D8B'};margin-bottom:5px;">${aviso.tipo==='alerta'?'⚠️':aviso.tipo==='festivo'?'🎉':'📢'} Aviso del club</div>
-      <div style="font-size:.84rem;color:var(--T);line-height:1.65;white-space:pre-wrap;">${aviso.texto}</div>
-    </div>
-  </div>`:''}
-
-  <div style="background:var(--P);border-radius:14px;padding:24px 18px 20px;margin-top:12px;border:1px solid rgba(92,58,30,.16);box-shadow:0 6px 20px rgba(44,24,16,.09);position:relative;overflow:hidden;">
+  ${avisoHTML}
+  <div style="background:var(--P);border-radius:14px;padding:24px 18px 20px;margin-top:12px;border:1px solid rgba(30,58,92,.16);box-shadow:0 6px 20px rgba(16,34,53,.09);position:relative;overflow:hidden;">
     <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--R),var(--O),var(--R));"></div>
     <div style="text-align:center;margin-bottom:20px;">
       <div style="font-family:var(--FD);font-size:1.1rem;font-weight:700;font-style:italic;color:var(--MD);margin-bottom:6px;">🔍 Consulta tu estado de cuenta</div>
@@ -772,15 +635,11 @@ function renderPanelPublico(listo){
     <input type="tel" id="qi" placeholder="· · · ·" maxlength="4" pattern="[0-9]*"
       onkeydown="if(event.key==='Enter')buscar()"
       oninput="this.value=this.value.replace(/[^0-9]/g,'')"
-      onfocus="this.style.borderColor='var(--R)';this.style.boxShadow='0 0 0 3px rgba(139,26,26,.12)';this.style.background='#fff'"
-      onblur="this.style.borderColor='rgba(92,58,30,.2)';this.style.boxShadow='none';this.style.background='#fff9f0'"
-      style="width:100%;padding:18px;font-size:2rem;letter-spacing:.8rem;text-align:center;font-weight:900;font-family:var(--FD);border:2px solid rgba(92,58,30,.2);border-radius:10px;background:#fff9f0;color:var(--T);outline:none;transition:all .2s;margin-bottom:11px;display:block;"/>
-    <button onclick="buscar()"
-      onmouseover="this.style.opacity='.88'"
-      onmouseout="this.style.opacity='1'"
-      onmousedown="this.style.transform='scale(.98)'"
-      onmouseup="this.style.transform=''"
-      style="width:100%;padding:15px;border:none;border-radius:10px;background:linear-gradient(160deg,var(--RL),var(--R));color:#fff8ee;font-family:var(--FD);font-size:1rem;font-weight:700;font-style:italic;cursor:pointer;box-shadow:0 4px 16px rgba(139,26,26,.28);letter-spacing:.3px;transition:all .15s;">
+      onfocus="this.style.borderColor='var(--R)';this.style.boxShadow='0 0 0 3px rgba(26,61,139,.12)';this.style.background='#fff'"
+      onblur="this.style.borderColor='rgba(30,58,92,.2)';this.style.boxShadow='none';this.style.background='#f0f5fc'"
+      style="width:100%;padding:18px;font-size:2rem;letter-spacing:.8rem;text-align:center;font-weight:900;font-family:var(--FD);border:2px solid rgba(30,58,92,.2);border-radius:10px;background:#f0f5fc;color:var(--T);outline:none;transition:all .2s;margin-bottom:11px;display:block;"/>
+    <button onclick="buscar()" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'" onmousedown="this.style.transform='scale(.98)'" onmouseup="this.style.transform=''"
+      style="width:100%;padding:15px;border:none;border-radius:10px;background:linear-gradient(160deg,var(--RL),var(--R));color:#fff;font-family:var(--FD);font-size:1rem;font-weight:700;font-style:italic;cursor:pointer;box-shadow:0 4px 16px rgba(26,61,139,.28);letter-spacing:.3px;transition:all .15s;">
       Consultar mi estado de cuenta →
     </button>
     <div id="res" style="margin-top:11px;"></div>
@@ -788,290 +647,129 @@ function renderPanelPublico(listo){
   <div style="text-align:center;padding:10px 0 2px;font-size:.69rem;font-style:italic;color:var(--M);opacity:.55;">${HOY.getDate()} de ${MESC[HM]} de ${HY}${cfg.dir?' · '+cfg.dir:''}</div>`;
 }
 
-// ══════════════════════════════════════════════
-//  CONFETI
-// ══════════════════════════════════════════════
-function lanzarConfeti(){
-  const cv=document.createElement('canvas');cv.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;';
-  document.body.appendChild(cv);cv.width=window.innerWidth;cv.height=window.innerHeight;
-  const ctx=cv.getContext('2d');const cols=['#C8942A','#8B1A1A','#27ae60','#3498db','#f39c12','#E8B84B'];
-  const ps=Array.from({length:120},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height-cv.height,r:Math.random()*5+3,spd:Math.random()*3.5+1.5,col:cols[Math.floor(Math.random()*cols.length)],ang:Math.random()*Math.PI*2,rot:0,rotSpd:(Math.random()-.5)*.12}));
-  let fr=0;const tick=()=>{try{if(++fr>210){document.body.removeChild(cv);return;}ctx.clearRect(0,0,cv.width,cv.height);ps.forEach(p=>{p.y+=p.spd;p.x+=Math.sin(fr*.05+p.ang)*1.8;p.rot+=p.rotSpd;if(p.y>cv.height){p.y=-10;p.x=Math.random()*cv.width;}ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.fillStyle=p.col;ctx.fillRect(-p.r,-p.r*.5,p.r*2,p.r);ctx.restore();});requestAnimationFrame(tick);}catch(e){try{document.body.removeChild(cv);}catch(_){}}};
-  requestAnimationFrame(tick);setTimeout(()=>{try{document.body.removeChild(cv);}catch(_){}},8000);
-}
+// ══ CONFETI ══
+function lanzarConfeti(){const cv=document.createElement('canvas');cv.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;';document.body.appendChild(cv);cv.width=window.innerWidth;cv.height=window.innerHeight;const ctx=cv.getContext('2d');const cols=['#C8942A','#1A3D8B','#27ae60','#3498db','#f39c12','#E8B84B'];const ps=Array.from({length:120},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height-cv.height,r:Math.random()*5+3,spd:Math.random()*3.5+1.5,col:cols[Math.floor(Math.random()*cols.length)],ang:Math.random()*Math.PI*2,rot:0,rotSpd:(Math.random()-.5)*.12}));let fr=0;const tick=()=>{try{if(++fr>210){document.body.removeChild(cv);return;}ctx.clearRect(0,0,cv.width,cv.height);ps.forEach(p=>{p.y+=p.spd;p.x+=Math.sin(fr*.05+p.ang)*1.8;p.rot+=p.rotSpd;if(p.y>cv.height){p.y=-10;p.x=Math.random()*cv.width;}ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.fillStyle=p.col;ctx.fillRect(-p.r,-p.r*.5,p.r*2,p.r);ctx.restore();});requestAnimationFrame(tick);}catch(e){try{document.body.removeChild(cv);}catch(_){}}};requestAnimationFrame(tick);setTimeout(()=>{try{document.body.removeChild(cv);}catch(_){}},8000);}
 
-// ══════════════════════════════════════════════
-//  CALENDARIO
-// ══════════════════════════════════════════════
-function renderCalAnio(regs,anio){
-  const esAct=anio===HY;let h='<div class="cal-grid">';
-  for(let m=0;m<=11;m++){
-    const rec=regs.find(d=>{const p=getPer(d);return p&&p.mes===m&&p.anio===anio;});
-    const cur=esAct&&m===HM,esFut=esAct&&m>HM;
-    let ico,cls,lbl;
-    if(!rec){ico='·';cls=esFut?'cal-fut':'cal-sd';lbl=esFut?'Futuro':'S/D';}
-    else{const t=tipoE(rec.estado);if(t==='pagado'){ico='✅';cls='cal-pag';lbl='Pagada';}else if(t==='noapli'){ico='⚪';cls='cal-na';lbl='No Aplica';}else if(esFut){ico='·';cls='cal-fut';lbl='Futuro';}else{ico='⚠️';cls='cal-imp';lbl='Pendiente';}}
-    h+=`<div class="cal-m ${cls}${cur?' cal-cur':''}"><span class="cal-ico">${ico}</span><span class="cal-mes">${MA[m]}</span><span class="cal-lbl">${lbl}</span></div>`;
-  }
-  return h+'</div>';
-}
+// ══ CALENDARIO ══
+function renderCalAnio(regs,anio){const esAct=anio===HY;let h='<div class="cal-grid">';for(let m=0;m<=11;m++){const rec=regs.find(d=>{const p=getPer(d);return p&&p.mes===m&&p.anio===anio;});const cur=esAct&&m===HM,esFut=esAct&&m>HM;let ico,cls,lbl;if(!rec){ico='·';cls=esFut?'cal-fut':'cal-sd';lbl=esFut?'Futuro':'S/D';}else{const t=tipoE(rec.estado);if(t==='pagado'){ico='✅';cls='cal-pag';lbl='Pagada';}else if(t==='noapli'){ico='⚪';cls='cal-na';lbl='No Aplica';}else if(esFut){ico='·';cls='cal-fut';lbl='Futuro';}else{ico='⚠️';cls='cal-imp';lbl='Pendiente';}}h+=`<div class="cal-m ${cls}${cur?' cal-cur':''}"><span class="cal-ico">${ico}</span><span class="cal-mes">${MA[m]}</span><span class="cal-lbl">${lbl}</span></div>`;}return h+'</div>';}
 
-// ══════════════════════════════════════════════
-//  BUSCAR SOCIO (vista pública)
-// ══════════════════════════════════════════════
+// ══ BUSCAR SOCIO (público) ══
 function buscar(){
-  const res=document.getElementById('res');
-  if(!res)return;
+  const res=document.getElementById('res');if(!res)return;
   if(!sheetsLoaded&&!datos.length){res.innerHTML='<div class="al ali">⏳ Aún cargando datos, espera un momento e inténtalo de nuevo.</div>';return;}
   const q=(document.getElementById('qi').value||'').trim().replace(/[^0-9]/g,'');
   if(q.length<4){res.innerHTML='<div class="al ale">⚠️ Ingresa exactamente los últimos 4 dígitos de tu RUT.</div>';return;}
-  if(!datos.length){res.innerHTML='<div class="al ale">ℹ️ Datos no disponibles. Contacta al administrador del club.</div>';return;}
+  if(!datos.length){res.innerHTML='<div class="al ale">ℹ️ Datos no disponibles. Contacta al administrador.</div>';return;}
   const regs=datos.filter(d=>u4(d.n_socio)===q.slice(-4));
   if(!regs.length){res.innerHTML=`<div class="al ale">❌ No se encontró un socio con RUT terminado en <strong>${q.slice(-4)}</strong>.</div>`;return;}
   const socios=[...new Set(regs.map(d=>d.n_socio))];
   if(socios.length>1){mostrarSeleccion(socios,regs,q.slice(-4));return;}
   mostrarRes(regs);
 }
-
 function mostrarSeleccion(socios,regs,rut4){
   const res=document.getElementById('res');
-  let h=`<div class="card" style="margin-top:13px;">
-    <div class="ct" style="color:var(--M);">👥 Más de un socio termina en ···${rut4}</div>
-    <p style="font-size:.82rem;color:var(--M);font-style:italic;margin-bottom:13px;">
-      Se encontraron <strong>${socios.length} socios</strong> con ese número. Selecciona tu nombre para continuar:
-    </p>`;
-  socios.forEach(ns=>{
-    const d=regs.find(x=>x.n_socio===ns);
-    const nom=(d?.nombre||ns).trim();
-    const partes=nom.split(/\s+/);
-    const disp=partes.length>1?`${partes[0]} ${partes[1].charAt(0)}.`:partes[0];
-    h+=`<button onclick="pedirVerificacion('${ns}')" style="width:100%;text-align:left;margin-bottom:8px;display:flex;align-items:center;gap:11px;padding:13px 16px;border:2px solid rgba(92,58,30,.18);border-radius:6px;background:var(--P);cursor:pointer;font-family:var(--FL);transition:.15s;" onmouseover="this.style.background='rgba(200,148,42,.09)'" onmouseout="this.style.background='var(--P)'">
-      <span style="font-size:1.35rem;">👤</span>
-      <span style="font-size:.95rem;font-weight:700;color:var(--T);">${disp}</span>
-    </button>`;
-  });
-  h+='</div>';
-  res.innerHTML=h;
+  let h=`<div class="card" style="margin-top:13px;"><div class="ct" style="color:var(--M);">👥 Más de un socio termina en ···${rut4}</div><p style="font-size:.82rem;color:var(--M);font-style:italic;margin-bottom:13px;">Selecciona tu nombre para continuar:</p>`;
+  socios.forEach(ns=>{const d=regs.find(x=>x.n_socio===ns);const nom=(d?.nombre||ns).trim();const partes=nom.split(/\s+/);const disp=partes.length>1?`${partes[0]} ${partes[1].charAt(0)}.`:partes[0];h+=`<button onclick="pedirVerificacion('${ns}')" style="width:100%;text-align:left;margin-bottom:8px;display:flex;align-items:center;gap:11px;padding:13px 16px;border:2px solid rgba(30,58,92,.15);border-radius:6px;background:var(--P);cursor:pointer;font-family:var(--FL);transition:.15s;" onmouseover="this.style.background='rgba(200,148,42,.08)'" onmouseout="this.style.background='var(--P)'"><span style="font-size:1.35rem;">👤</span><span style="font-size:.95rem;font-weight:700;color:var(--T);">${disp}</span></button>`;});
+  h+='</div>';res.innerHTML=h;
 }
-
 function pedirVerificacion(ns){
-  const res=document.getElementById('res');
-  const d=datos.find(x=>x.n_socio===ns);
-  const nom=(d?.nombre||ns).trim();
-  const partes=nom.split(/\s+/);
-  const disp=partes.length>1?`${partes[0]} ${partes[1].charAt(0)}.`:partes[0];
-  res.innerHTML=`
-    <div class="card" style="margin-top:13px;">
-      <div class="ct" style="color:var(--M);">🔒 Verificación de identidad</div>
-      <div style="background:rgba(92,58,30,.05);border-radius:6px;padding:10px 14px;margin-bottom:13px;display:flex;align-items:center;gap:10px;">
-        <span style="font-size:1.4rem;">👤</span>
-        <span style="font-size:.95rem;font-weight:700;color:var(--T);">${disp}</span>
-      </div>
-      <p style="font-size:.82rem;color:var(--M);font-style:italic;margin-bottom:5px;">Para confirmar tu identidad, ingresa los <strong>primeros 4 dígitos de tu RUT</strong>:</p>
-      <p style="font-size:.73rem;color:#999;font-style:italic;margin-bottom:11px;">Ejemplo: si tu RUT es 12.345.678-9, escribe <strong>1234</strong></p>
-      <div class="ir">
-        <input type="tel" id="ver-inp" placeholder="Primeros 4 dígitos" maxlength="4" pattern="[0-9]*"
-          onkeydown="if(event.key==='Enter')verificarSocio('${ns}')"/>
-        <button class="btn br" onclick="verificarSocio('${ns}')">Verificar</button>
-      </div>
-      <div id="ver-msg"></div>
-      <button class="btn bgr sm" style="margin-top:9px;" onclick="buscar()">← Volver</button>
-    </div>`;
+  const res=document.getElementById('res');const d=datos.find(x=>x.n_socio===ns);const nom=(d?.nombre||ns).trim();const partes=nom.split(/\s+/);const disp=partes.length>1?`${partes[0]} ${partes[1].charAt(0)}.`:partes[0];
+  res.innerHTML=`<div class="card" style="margin-top:13px;"><div class="ct" style="color:var(--M);">🔒 Verificación de identidad</div><div style="background:rgba(30,58,92,.05);border-radius:6px;padding:10px 14px;margin-bottom:13px;display:flex;align-items:center;gap:10px;"><span style="font-size:1.4rem;">👤</span><span style="font-size:.95rem;font-weight:700;color:var(--T);">${disp}</span></div><p style="font-size:.82rem;color:var(--M);font-style:italic;margin-bottom:5px;">Ingresa los <strong>primeros 4 dígitos de tu RUT</strong>:</p><p style="font-size:.73rem;color:#999;font-style:italic;margin-bottom:11px;">Ejemplo: RUT 12.345.678-9 → escribe <strong>1234</strong></p><div class="ir"><input type="tel" id="ver-inp" placeholder="Primeros 4 dígitos" maxlength="4" pattern="[0-9]*" onkeydown="if(event.key==='Enter')verificarSocio('${ns}')"/><button class="btn br" onclick="verificarSocio('${ns}')">Verificar</button></div><div id="ver-msg"></div><button class="btn bgr sm" style="margin-top:9px;" onclick="buscar()">← Volver</button></div>`;
   setTimeout(()=>document.getElementById('ver-inp')?.focus(),100);
 }
-
 function verificarSocio(ns){
-  const inp=document.getElementById('ver-inp');
-  const msg=document.getElementById('ver-msg');
-  const ingresado=(inp?.value||'').trim().replace(/[^0-9]/g,'');
+  const inp=document.getElementById('ver-inp');const msg=document.getElementById('ver-msg');const ingresado=(inp?.value||'').trim().replace(/[^0-9]/g,'');
   if(ingresado.length<4){msg.innerHTML='<div class="al ale">⚠️ Ingresa exactamente los primeros 4 dígitos.</div>';return;}
-  if(ingresado!==nRut(ns).slice(0,4)){
-    msg.innerHTML='<div class="al ale">❌ Los dígitos no coinciden. Intenta nuevamente.</div>';
-    inp.value='';inp.focus();return;
-  }
+  if(ingresado!==nRut(ns).slice(0,4)){msg.innerHTML='<div class="al ale">❌ Los dígitos no coinciden. Intenta nuevamente.</div>';inp.value='';inp.focus();return;}
   mostrarRes(datos.filter(d=>d.n_socio===ns));
 }
 
 function mostrarRes(regs){
-  const res=document.getElementById('res');
-  const nombre=regs[0].nombre,rut4=u4(regs[0].n_socio);
-  const impagas=regs.filter(d=>esImpagoPasado(d));
-  const pagadas=regs.filter(d=>tipoE(d.estado)==='pagado');
-  const sem=getSem(impagas.length);
-  const totalD=impagas.length*vc();
+  const res=document.getElementById('res');const nombre=regs[0].nombre,rut4=u4(regs[0].n_socio);
+  const impagas=regs.filter(d=>esImpagoPasado(d));const pagadas=regs.filter(d=>tipoE(d.estado)==='pagado');
+  const sem=getSem(impagas.length);const totalD=impagas.length*vc();
   const anios=[...new Set(regs.map(d=>{const p=getPer(d);return p?p.anio:null;}).filter(Boolean))].sort((a,b)=>b-a);
-
-  let h=`<div class="rh" style="margin-top:13px;"><div class="rt"><div><div class="rn">🧑 ${nombre}</div><div class="rr">RUT termina en ···${rut4}</div></div>${impagas.length?`<div class="bad-d"><div class="bdl">Cuotas imp.</div><div class="bdn">${impagas.length}</div></div>`:'<div class="bad-al">✅ Al día</div>'}</div></div>
-  <div style="margin:8px 0 4px;"><span class="semaforo ${sem.cls}">${sem.ico}&nbsp;${sem.txt}${impagas.length>0?' — '+impagas.length+' cuota'+(impagas.length>1?'s':''):''}</span></div>`;
-
+  let h=`<div class="rh" style="margin-top:13px;"><div class="rt"><div><div class="rn">🧑 ${nombre}</div><div class="rr">RUT termina en ···${rut4}</div></div>${impagas.length?`<div class="bad-d"><div class="bdl">Cuotas imp.</div><div class="bdn">${impagas.length}</div></div>`:'<div class="bad-al">✅ Al día</div>'}</div></div><div style="margin:8px 0 4px;"><span class="semaforo ${sem.cls}">${sem.ico}&nbsp;${sem.txt}${impagas.length>0?' — '+impagas.length+' cuota'+(impagas.length>1?'s':''):''}</span></div>`;
   if(impagas.length>=3)h+=`<div class="alerta-mor"><span class="aico">🚨</span><div><strong>¡Deuda significativa!</strong>Registras <strong>${impagas.length} cuotas impagas</strong>. Por favor regulariza tu situación a la brevedad.</div></div>`;
-
-  if(impagas.length>0){
-    const pers=impagas.map(d=>getPer(d)).filter(Boolean).sort((a,b)=>a.anio!==b.anio?a.anio-b.anio:a.mes-b.mes);
-    const ant=pers[0];
-    h+=`<div class="calc-box"><div class="calc-title">🧮 Resumen de deuda</div>
-      <div class="calc-row"><span class="lbl">Cuotas impagas</span><span class="val">${impagas.length}</span></div>
-      <div class="calc-row"><span class="lbl">Valor por cuota</span><span class="val">${fmt(vc())}</span></div>
-      ${ant?`<div class="calc-row"><span class="lbl">Deuda más antigua</span><span class="val">${MESC[ant.mes]} ${ant.anio}</span></div>`:''}
-      <div class="calc-row"><span class="lbl">💰 Total a pagar hoy</span><span class="val">${fmt(totalD)}</span></div>
-    </div>`;
-    if(cfg.banco)h+=`<div class="card az" style="margin:10px 0 0;padding:13px 15px;"><div class="ct" style="color:#1A3D8B;">🏦 Datos para transferencia</div><p style="font-size:.84rem;color:#2a4a8a;white-space:pre-wrap;line-height:1.7;">${cfg.banco}</p><button class="btn bcp sm" style="margin-top:8px;" onclick="copiarBanco(this)">📋 Copiar datos bancarios</button></div>`;
-  }
-
+  if(impagas.length>0){const pers=impagas.map(d=>getPer(d)).filter(Boolean).sort((a,b)=>a.anio!==b.anio?a.anio-b.anio:a.mes-b.mes);const ant=pers[0];h+=`<div class="calc-box"><div class="calc-title">🧮 Resumen de deuda</div><div class="calc-row"><span class="lbl">Cuotas impagas</span><span class="val">${impagas.length}</span></div><div class="calc-row"><span class="lbl">Valor por cuota</span><span class="val">${fmt(vc())}</span></div>${ant?`<div class="calc-row"><span class="lbl">Deuda más antigua</span><span class="val">${MESC[ant.mes]} ${ant.anio}</span></div>`:''}<div class="calc-row"><span class="lbl">💰 Total a pagar hoy</span><span class="val">${fmt(totalD)}</span></div></div>`;if(cfg.banco)h+=`<div class="card az" style="margin:10px 0 0;padding:13px 15px;"><div class="ct" style="color:#1A3D8B;">🏦 Datos para transferencia</div><p style="font-size:.84rem;color:#2a4a8a;white-space:pre-wrap;line-height:1.7;">${cfg.banco}</p><button class="btn bcp sm" style="margin-top:8px;" onclick="copiarBanco(this)">📋 Copiar datos bancarios</button></div>`;}
   anios.forEach(anio=>{
-    const regsAnio=regs.filter(d=>{const p=getPer(d);return p&&p.anio===anio;});
-    const impAnio=regsAnio.filter(d=>esImpagoPasado(d));
-    const pagAnio=regsAnio.filter(d=>tipoE(d.estado)==='pagado');
-    const naAnio=regsAnio.filter(d=>tipoE(d.estado)==='noapli');
-    const esAct=anio===HY,mHasta=anio<HY?11:HM;
-    const mVig=regsAnio.filter(d=>{const p=getPer(d);return p&&p.mes<=mHasta&&tipoE(d.estado)!=='noapli';}).length||Math.max(0,mHasta+1);
-    const pct=mVig>0?Math.round((pagAnio.length/mVig)*100):0;
+    const regsAnio=regs.filter(d=>{const p=getPer(d);return p&&p.anio===anio;});const impAnio=regsAnio.filter(d=>esImpagoPasado(d));const pagAnio=regsAnio.filter(d=>tipoE(d.estado)==='pagado');const naAnio=regsAnio.filter(d=>tipoE(d.estado)==='noapli');
+    const esAct=anio===HY,mHasta=anio<HY?11:HM;const mVig=regsAnio.filter(d=>{const p=getPer(d);return p&&p.mes<=mHasta&&tipoE(d.estado)!=='noapli';}).length||Math.max(0,mHasta+1);const pct=mVig>0?Math.round((pagAnio.length/mVig)*100):0;
     const progColor=pct===100?'linear-gradient(90deg,#27ae60,#2ecc71)':pct>=50?'linear-gradient(90deg,#f0ad00,#f5c842)':'linear-gradient(90deg,var(--R),var(--RL))';
-    h+=`<div class="yr-head"><span class="yr-anio">📅 ${anio}${esAct?' <span style="font-size:.63rem;opacity:.55;font-weight:400;">(en curso)</span>':''}</span><span class="yr-badge">${impAnio.length>0?`⚠️ ${impAnio.length} impaga${impAnio.length>1?'s':''}`:pagAnio.length>0?'✅ Sin deuda':'—'}</span></div>
-    <div class="yr-prog-l"><span>Pagadas ${anio}</span><span>${pagAnio.length}/${mVig} — ${pct}%</span></div>
-    <div class="yr-prog-w"><div class="yr-prog-b" style="width:${pct}%;background:${progColor};"></div></div>`;
+    h+=`<div class="yr-head"><span class="yr-anio">📅 ${anio}${esAct?' <span style="font-size:.63rem;opacity:.55;font-weight:400;">(en curso)</span>':''}</span><span class="yr-badge">${impAnio.length>0?`⚠️ ${impAnio.length} impaga${impAnio.length>1?'s':''}`:pagAnio.length>0?'✅ Sin deuda':'—'}</span></div><div class="yr-prog-l"><span>Pagadas ${anio}</span><span>${pagAnio.length}/${mVig} — ${pct}%</span></div><div class="yr-prog-w"><div class="yr-prog-b" style="width:${pct}%;background:${progColor};"></div></div>`;
     h+=renderCalAnio(regsAnio,anio);
     if(impAnio.length>0){h+=`<div class="dvig"><div class="dvig-tit">⚠️ Deuda vigente ${anio}</div>`;impAnio.sort((a,b)=>{const pa=getPer(a),pb=getPer(b);return(pa&&pb)?pa.mes-pb.mes:0;}).forEach(d=>{h+=`<div class="cr imp"><span class="crp">📅 ${pLabel(d)}</span><span style="display:flex;align-items:center;gap:7px;"><span class="crm">${fmt(vc())}</span><span class="tag ti">Impago</span></span></div>`;});h+='</div>';}
     if(naAnio.length>0){h+=`<div style="background:rgba(150,150,150,.05);border:1px solid rgba(150,150,150,.18);border-radius:5px;margin-bottom:9px;overflow:hidden;"><div style="font-size:.71rem;font-weight:700;font-style:italic;color:#888;padding:5px 12px 4px;">⚪ Meses No Aplica ${anio}</div>`;naAnio.forEach(d=>{h+=`<div class="cr na"><span class="crp" style="color:#888;">📅 ${pLabel(d)}</span><span class="tag tna2">No Aplica</span></div>`;});h+='</div>';}
   });
-
-  if(pagadas.length){
-    h+=`<div class="sl2">✅ Historial de pagos</div><div class="lc">`;
-    pagadas.sort((a,b)=>{const pa=getPer(a),pb=getPer(b);if(!pa||!pb)return 0;return pb.anio!==pa.anio?pb.anio-pa.anio:pb.mes-pa.mes;}).forEach(d=>{const fp=d.formaPago?` · ${d.formaPago}`:'';h+=`<div class="cr pag"><span class="crp">📅 ${pLabel(d)}</span><span style="display:flex;align-items:center;gap:7px;"><span class="crm">${fmt(vc())}${fp}</span><span class="tag tp">Pagado</span></span></div>`;});
-    h+='</div>';
-  }
-
-  if(cfg.correo||cfg.telTes){
-    const msgC=`Estimado/a equipo de ${cfg.nombre||'el club'},\n\nMi nombre es ${nombre} y mi RUT termina en ···${rut4}.\n\n${impagas.length>0?`Quisiera regularizar ${impagas.length} cuota${impagas.length>1?'s impagas':' impaga'} (${fmt(totalD)}). ¿Cuándo y cómo puedo efectuar el pago?`:'Tengo una consulta sobre mi estado de cuenta.'}\n\nSaludos cordiales,\n${nombre}`;
-    h+=`<div class="contact-card"><div class="ct" style="color:#1A3D8B;">💬 Contactar al club</div><div class="msg-preview" id="contact-preview">${msgC}</div><div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;"><button class="btn bcp sm" onclick="copiarMsg(this,'contact-preview','contact-fb')">📋 Copiar mensaje</button><span class="copy-feedback" id="contact-fb">✅ Copiado</span></div>${cfg.correo?`<p style="font-size:.72rem;color:#5a7ab0;font-style:italic;margin-top:7px;">📧 ${cfg.correo}</p>`:''}</div>`;
-  }
-
-  if(!impagas.length){
-    h+=`<div class="insignia"><div class="ins-inner"><span class="ins-ico">🏅</span><div class="ins-tit">SOCIO CUMPLIDOR</div><div class="ins-sub">${cfg.nombre||'A Compás de Picaflor'} · ${HY}</div></div></div>
-    <div class="card g"><div class="fest"><span class="fi">🎉</span><div class="fm">¡Felicitaciones, ${nombre.split(' ')[0]}!</div><div class="fs2">Estás completamente al día con el club. ¡Muchas gracias por tu compromiso!</div></div></div>`;
-    setTimeout(lanzarConfeti,350);
-  }
+  if(pagadas.length){h+=`<div class="sl2">✅ Historial de pagos</div><div class="lc">`;pagadas.sort((a,b)=>{const pa=getPer(a),pb=getPer(b);if(!pa||!pb)return 0;return pb.anio!==pa.anio?pb.anio-pa.anio:pb.mes-pa.mes;}).forEach(d=>{const fp=d.formaPago?` · ${d.formaPago}`:'';h+=`<div class="cr pag"><span class="crp">📅 ${pLabel(d)}</span><span style="display:flex;align-items:center;gap:7px;"><span class="crm">${fmt(vc())}${fp}</span><span class="tag tp">Pagado</span></span></div>`;});h+='</div>';}
+  if(cfg.correo||cfg.telTes){const msgC=`Estimado/a equipo de ${cfg.nombre||'el club'},\n\nMi nombre es ${nombre} y mi RUT termina en ···${rut4}.\n\n${impagas.length>0?`Quisiera regularizar ${impagas.length} cuota${impagas.length>1?'s impagas':' impaga'} (${fmt(totalD)}). ¿Cuándo y cómo puedo efectuar el pago?`:'Tengo una consulta sobre mi estado de cuenta.'}\n\nSaludos cordiales,\n${nombre}`;h+=`<div class="contact-card"><div class="ct" style="color:#1A3D8B;">💬 Contactar al club</div><div class="msg-preview" id="contact-preview">${msgC}</div><div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;"><button class="btn bcp sm" onclick="copiarMsg(this,'contact-preview','contact-fb')">📋 Copiar mensaje</button><span class="copy-feedback" id="contact-fb">✅ Copiado</span></div>${cfg.correo?`<p style="font-size:.72rem;color:#5a7ab0;font-style:italic;margin-top:7px;">📧 ${cfg.correo}</p>`:''}</div>`;}
+  if(!impagas.length){h+=`<div class="insignia"><div class="ins-inner"><span class="ins-ico">🏅</span><div class="ins-tit">SOCIO CUMPLIDOR</div><div class="ins-sub">${cfg.nombre||'A Compás de Picaflor'} · ${HY}</div></div></div><div class="card g"><div class="fest"><span class="fi">🎉</span><div class="fm2">¡Felicitaciones, ${nombre.split(' ')[0]}!</div><div class="fs2">Estás completamente al día con el club. ¡Muchas gracias por tu compromiso!</div></div></div>`;setTimeout(lanzarConfeti,350);}
   h+=`<div style="margin-top:11px;"><button class="btn bgr sm" onclick="window.print()">🖨️ Imprimir / guardar PDF</button></div>`;
   res.innerHTML=h;
 }
-
 function copiarBanco(btn){navigator.clipboard.writeText(cfg.banco||'').then(()=>{btn.textContent='✅ ¡Copiado!';setTimeout(()=>btn.textContent='📋 Copiar datos bancarios',2500);});}
 function copiarMsg(btn,srcId,fbId){const el=document.getElementById(srcId);navigator.clipboard.writeText(el?el.textContent:'').then(()=>{const fb=document.getElementById(fbId);if(fb){fb.classList.add('show');setTimeout(()=>fb.classList.remove('show'),2500);}});}
 
-// ══════════════════════════════════════════════
-//  GUARDAR
-// ══════════════════════════════════════════════
+// ══ GUARDAR ══
 async function guardarSilencioso(){await sS('pf_datos',JSON.stringify(datos));}
 async function borrar(){document.getElementById('modal-del').classList.remove('open');await sD('pf_datos');datos=[];document.getElementById('dcard').style.display='none';document.getElementById('res-banner').style.display='none';await sincronizarAdmin();}
-function mostrarResBannerCompleto(nS,nP,nI,nNA){
-  document.getElementById('res-banner').innerHTML=`<div class="res-banner"><div class="res-banner-t">📊 Resumen de datos cargados</div><div class="res-grid"><div class="res-item"><div class="res-num">${nS}</div><div class="res-lbl">Socios</div></div><div class="res-item"><div class="res-num">${datos.length}</div><div class="res-lbl">Registros</div></div><div class="res-item"><div class="res-num">${nP}</div><div class="res-lbl">Pagadas</div></div><div class="res-item"><div class="res-num" style="color:#ffcdd2;">${nI}</div><div class="res-lbl">Impagas</div></div></div>${nNA>0?`<div class="diag-box">⚪ ${nNA} registros "No Aplica"</div>`:''}</div>`;
-  document.getElementById('res-banner').style.display='block';
-}
-function mostrarResBanner(){
-  if(!datos.length){document.getElementById('res-banner').style.display='none';return;}
-  const nS=[...new Set(datos.map(d=>d.n_socio).filter(Boolean))].length;
-  mostrarResBannerCompleto(nS,datos.filter(d=>tipoE(d.estado)==='pagado').length,datos.filter(d=>esImpagoPasado(d)).length,datos.filter(d=>tipoE(d.estado)==='noapli').length);
-}
+function mostrarResBannerCompleto(nS,nP,nI,nNA){document.getElementById('res-banner').innerHTML=`<div class="res-banner"><div class="res-banner-t">📊 Resumen de datos cargados</div><div class="res-grid"><div class="res-item"><div class="res-num">${nS}</div><div class="res-lbl">Socios</div></div><div class="res-item"><div class="res-num">${datos.length}</div><div class="res-lbl">Registros</div></div><div class="res-item"><div class="res-num">${nP}</div><div class="res-lbl">Pagadas</div></div><div class="res-item"><div class="res-num" style="color:#ffcdd2;">${nI}</div><div class="res-lbl">Impagas</div></div></div>${nNA>0?`<div class="diag-box">⚪ ${nNA} registros "No Aplica"</div>`:''}</div>`;document.getElementById('res-banner').style.display='block';}
+function mostrarResBanner(){if(!datos.length){document.getElementById('res-banner').style.display='none';return;}const nS=[...new Set(datos.map(d=>d.n_socio).filter(Boolean))].length;mostrarResBannerCompleto(nS,datos.filter(d=>tipoE(d.estado)==='pagado').length,datos.filter(d=>esImpagoPasado(d)).length,datos.filter(d=>tipoE(d.estado)==='noapli').length);}
 function confirmarBorrar(){document.getElementById('modal-del').classList.add('open');}
 
-// ══════════════════════════════════════════════
-//  TABLA ADMIN
-// ══════════════════════════════════════════════
+// ══ TABLA ADMIN ══
 function dMap(){const m={};[...new Set(datos.map(d=>d.n_socio))].forEach(ns=>m[ns]=0);datos.forEach(d=>{if(esImpagoPasado(d))m[d.n_socio]++;});return m;}
 function rTabla(){
-  if(!datos.length)return;
-  document.getElementById('dcard').style.display='block';
+  if(!datos.length)return;document.getElementById('dcard').style.display='block';
   const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  const fn=norm(document.getElementById('fn')?.value||'');
-  const fyEl=document.getElementById('fy');
-  const fmEl=document.getElementById('fm');
-  const fy=fyEl?.value||'';
-  const fm=fmEl?.value||'';
-  const fEst=document.getElementById('fe')?.value||'';
-  const fSort=document.getElementById('fs')?.value||'';
-  // Poblar años dinámicamente
+  const fn=norm(document.getElementById('fn')?.value||'');const fyEl=document.getElementById('fy');const fmEl=document.getElementById('fm');const fy=fyEl?.value||'';const fm=fmEl?.value||'';const fEst=document.getElementById('fe')?.value||'';const fSort=document.getElementById('fs')?.value||'';
   const anios=[...new Set(datos.map(d=>{const p=getPer(d);return p?p.anio:null;}).filter(Boolean))].sort((a,b)=>b-a);
   if(fyEl){const cy=fyEl.value;fyEl.innerHTML='<option value="">Todos los años</option>';anios.forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=a;if(String(a)===cy)o.selected=true;fyEl.appendChild(o);});}
-  // Poblar meses según año seleccionado
-  if(fmEl){
-    const cm=fmEl.value;fmEl.innerHTML='<option value="">Todos los meses</option>';
-    if(fy){const meses=[...new Set(datos.filter(d=>{const p=getPer(d);return p&&String(p.anio)===fy;}).map(d=>{const p=getPer(d);return p?p.mes:null;}).filter(n=>n!==null))].sort((a,b)=>a-b);meses.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=MESC[m];if(String(m)===cm)o.selected=true;fmEl.appendChild(o);});}
-  }
-  // Aplicar filtros
+  if(fmEl){const cm=fmEl.value;fmEl.innerHTML='<option value="">Todos los meses</option>';if(fy){const meses=[...new Set(datos.filter(d=>{const p=getPer(d);return p&&String(p.anio)===fy;}).map(d=>{const p=getPer(d);return p?p.mes:null;}).filter(n=>n!==null))].sort((a,b)=>a-b);meses.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=MESC[m];if(String(m)===cm)o.selected=true;fmEl.appendChild(o);});}}
   const dm=dMap();
-  let f=datos.filter(d=>{
-    if(fn&&!norm(d.nombre).includes(fn))return false;
-    const p=getPer(d);
-    if(fy&&(!p||String(p.anio)!==fy))return false;
-    if(fm&&(!p||String(p.mes)!==fm))return false;
-    if(fEst==='impago')return esImpagoPasado(d);
-    if(fEst==='pagado')return tipoE(d.estado)==='pagado';
-    if(fEst==='na')return tipoE(d.estado)==='noapli';
-    return true;
-  });
-  if(fSort==='deuda')f.sort((a,b)=>(dm[b.n_socio]||0)-(dm[a.n_socio]||0));
-  else if(fSort==='nombre')f.sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'));
-  // Render
+  let f=datos.filter(d=>{if(fn&&!norm(d.nombre).includes(fn))return false;const p=getPer(d);if(fy&&(!p||String(p.anio)!==fy))return false;if(fm&&(!p||String(p.mes)!==fm))return false;if(fEst==='impago')return esImpagoPasado(d);if(fEst==='pagado')return tipoE(d.estado)==='pagado';if(fEst==='na')return tipoE(d.estado)==='noapli';return true;});
+  if(fSort==='deuda')f.sort((a,b)=>(dm[b.n_socio]||0)-(dm[a.n_socio]||0));else if(fSort==='nombre')f.sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'));
   document.getElementById('tchip').textContent=`${f.length} / ${datos.length} registros`;
   let h=`<table><thead><tr><th>RUT</th><th>Nombre</th><th>Período</th><th>Estado</th><th></th><th>Acción</th></tr></thead><tbody>`;
-  if(!f.length){h+=`<tr><td colspan="6" style="text-align:center;padding:20px;font-style:italic;color:var(--M);font-size:.82rem;">Sin resultados para los filtros aplicados</td></tr>`;}
-  f.forEach(d=>{
-    const esImp=esImpagoPasado(d),t=tipoE(d.estado);const idx=datos.indexOf(d);const sem=getSem(dm[d.n_socio]||0);
-    const cls=esImp?'tr':t==='pagado'?'tg2c':t==='noapli'?'tna':'to';
-    const estadoLabel=t==='noapli'?'⚪ No Aplica':d.estado||'—';
-    h+=`<tr><td>···${u4(d.n_socio)}</td><td>${d.nombre||'—'}</td><td>${pLabel(d)}</td><td class="${cls}">${estadoLabel}${d.formaPago?`<br><span style="font-size:.65rem;color:#888;">${d.formaPago}</span>`:''}</td><td>${sem.ico}</td><td>${esImp?`<button class="btn bg xs" onclick="showPayModal(${idx})">✅ Pagado</button>`:'<span class="to" style="font-size:.7rem;">—</span>'}</td></tr>`;
-  });
+  if(!f.length)h+=`<tr><td colspan="6" style="text-align:center;padding:20px;font-style:italic;color:var(--M);font-size:.82rem;">Sin resultados</td></tr>`;
+  f.forEach(d=>{const esImp=esImpagoPasado(d),t=tipoE(d.estado);const idx=datos.indexOf(d);const sem=getSem(dm[d.n_socio]||0);const cls=esImp?'tr':t==='pagado'?'tg2c':t==='noapli'?'tna':'to';const estadoLabel=t==='noapli'?'⚪ No Aplica':d.estado||'—';h+=`<tr><td>···${u4(d.n_socio)}</td><td>${d.nombre||'—'}</td><td>${pLabel(d)}</td><td class="${cls}">${estadoLabel}${d.formaPago?`<br><span style="font-size:.65rem;color:#888;">${d.formaPago}</span>`:''}</td><td>${sem.ico}</td><td>${esImp?`<button class="btn bg xs" onclick="showPayModal(${idx})">✅ Pagado</button>`:'<span class="to" style="font-size:.7rem;">—</span>'}</td></tr>`;});
   document.getElementById('atbl').innerHTML=h+'</tbody></table>';
 }
 
-// ══════════════════════════════════════════════
-//  MODAL PAGO INDIVIDUAL
-// ══════════════════════════════════════════════
+// ══ MODAL PAGO INDIVIDUAL ══
 function showPayModal(idx){pendingPayIdx=idx;const d=datos[idx];document.getElementById('mi-nom').textContent=d.nombre;document.getElementById('mi-per').textContent=pLabel(d);document.getElementById('mi-mto').textContent=fmt(vc());document.getElementById('modal').classList.add('open');}
 function cerrarModal(){document.getElementById('modal').classList.remove('open');pendingPayIdx=null;}
 async function confirmarPago(){
-  if(pendingPayIdx===null)return;
-  const method=document.querySelector('input[name="fpm"]:checked').value;
-  const d=datos[pendingPayIdx];d.estado='Pagado';d.formaPago=method;d.fechaPago=HOY.toLocaleDateString('es-CL');
+  if(pendingPayIdx===null)return;const method=document.querySelector('input[name="fpm"]:checked').value;const d=datos[pendingPayIdx];d.estado='Pagado';d.formaPago=method;d.fechaPago=HOY.toLocaleDateString('es-CL');
   cerrarModal();await guardarSilencioso();mostrarVoucherCobro([d],method);rTabla();rStats();mostrarResBanner();
   document.getElementById('smsg').innerHTML='<div class="al alo">✅ Pago registrado.</div>';setTimeout(()=>document.getElementById('smsg').innerHTML='',5000);
 }
 
-// ══════════════════════════════════════════════
-//  COBRO ADMIN
-// ══════════════════════════════════════════════
+// ══ COBRO ADMIN ══
 function initCobro(){cobroNS=null;document.getElementById('cobro-q').value='';document.getElementById('cobro-lista').innerHTML='';document.getElementById('cobro-panel').style.display='none';}
 function limpiarCobro(){document.getElementById('cobro-q').value='';document.getElementById('cobro-lista').innerHTML='';document.getElementById('cobro-panel').style.display='none';cobroNS=null;}
 function buscarSocioAdmin(){
-  const q=document.getElementById('cobro-q').value.trim().toLowerCase();
-  const lista=document.getElementById('cobro-lista');
+  const q=document.getElementById('cobro-q').value.trim().toLowerCase();const lista=document.getElementById('cobro-lista');
   if(!q||!datos.length){lista.innerHTML='';return;}
-  const socios=[...new Set(datos.map(d=>d.n_socio).filter(Boolean))];
-  const dm=dMap();
-  const norm=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-  const qn=norm(q);
+  const socios=[...new Set(datos.map(d=>d.n_socio).filter(Boolean))];const dm=dMap();
+  const norm=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();const qn=norm(q);
   const matches=socios.filter(ns=>{const d=datos.find(x=>x.n_socio===ns);return norm(d?.nombre||'').includes(qn)||u4(ns).includes(q);}).slice(0,10);
   if(!matches.length){lista.innerHTML='<div class="al ale" style="margin-top:9px;">No se encontraron socios.</div>';return;}
   let h='<div class="cobro-res-list">';
-  matches.forEach(ns=>{
-    const d=datos.find(x=>x.n_socio===ns);const nom=d?.nombre||ns,imp=dm[ns]||0;const isSel=cobroNS===ns;
-    h+=`<div class="cobro-soc-row${isSel?' csel':''}" onclick="selSocioAdmin('${ns}')"><div><div class="cobro-soc-nom">${nom}</div><div class="cobro-soc-det">RUT ···${u4(ns)} · ${imp>0?`${imp} cuota${imp>1?'s':''} impaga${imp>1?'s':''}`:'Sin deuda'}</div></div><span class="cobro-soc-badge ${imp>0?'cbr':'cbg'}">${imp>0?`⚠️ ${imp} imp.`:'✅ Al día'}</span></div>`;
-  });
+  matches.forEach(ns=>{const d=datos.find(x=>x.n_socio===ns);const nom=d?.nombre||ns,imp=dm[ns]||0;const isSel=cobroNS===ns;h+=`<div class="cobro-soc-row${isSel?' csel':''}" onclick="selSocioAdmin('${ns}')"><div><div class="cobro-soc-nom">${nom}</div><div class="cobro-soc-det">RUT ···${u4(ns)} · ${imp>0?`${imp} cuota${imp>1?'s':''} impaga${imp>1?'s':''}`:'Sin deuda'}</div></div><span class="cobro-soc-badge ${imp>0?'cbr':'cbg'}">${imp>0?`⚠️ ${imp} imp.`:'✅ Al día'}</span></div>`;});
   lista.innerHTML=h+'</div>';
 }
 function selSocioAdmin(ns){
-  cobroNS=ns;buscarSocioAdmin();
-  const regs=datos.filter(d=>d.n_socio===ns);const nom=regs[0]?.nombre||ns;const sem=getSem(dMap()[ns]||0);
+  cobroNS=ns;buscarSocioAdmin();const regs=datos.filter(d=>d.n_socio===ns);const nom=regs[0]?.nombre||ns;const sem=getSem(dMap()[ns]||0);
   document.getElementById('cobro-nombre').textContent=nom;document.getElementById('cobro-rut4').textContent=`RUT ···${u4(ns)}`;
   document.getElementById('cobro-sem-badge').innerHTML=`<span class="semaforo ${sem.cls}" style="font-size:.73rem;padding:4px 10px;">${sem.ico} ${sem.txt}</span>`;
   renderCobroCuotas(ns);document.getElementById('cobro-panel').style.display='block';document.getElementById('cobro-msg').innerHTML='';
   setTimeout(()=>document.getElementById('cobro-panel').scrollIntoView({behavior:'smooth',block:'start'}),120);
 }
 function renderCobroCuotas(ns){
-  const imp=datos.filter(d=>d.n_socio===ns&&esImpagoPasado(d));
-  imp.sort((a,b)=>{const pa=getPer(a),pb=getPer(b);if(!pa||!pb)return 0;return pa.anio!==pb.anio?pa.anio-pb.anio:pa.mes-pb.mes;});
+  const imp=datos.filter(d=>d.n_socio===ns&&esImpagoPasado(d));imp.sort((a,b)=>{const pa=getPer(a),pb=getPer(b);if(!pa||!pb)return 0;return pa.anio!==pb.anio?pa.anio-pb.anio:pa.mes-pb.mes;});
   const el=document.getElementById('cobro-cuotas'),btn=document.getElementById('cobro-btn');
-  if(!imp.length){el.innerHTML='<div class="cobro-empty"><span>🎉</span>Este socio no tiene cuotas pendientes.</div>';btn.disabled=true;btn.style.opacity='.4';updTotalCobro();return;}
+  if(!imp.length){el.innerHTML='<div class="cobro-empty"><span>🎉</span>Sin cuotas pendientes.</div>';btn.disabled=true;btn.style.opacity='.4';updTotalCobro();return;}
   btn.disabled=false;btn.style.opacity='1';
   let h=`<div class="sel-all-row" onclick="toggleTodasCobro()"><input type="checkbox" id="chk-all-cobro" checked/><span>Seleccionar todas (${imp.length} cuota${imp.length>1?'s':''})</span></div>`;
   imp.forEach(d=>{const idx=datos.indexOf(d);h+=`<div class="cuota-row cq-sel" onclick="toggleCuotaRow(this)"><input type="checkbox" class="chk-cuota" data-idx="${idx}" checked/><span class="cuota-mes">📅 ${pLabel(d)}</span><span class="cuota-mto">${fmt(vc())}</span></div>`;});
@@ -1080,86 +778,106 @@ function renderCobroCuotas(ns){
 function toggleCuotaRow(row){const chk=row.querySelector('input[type=checkbox]');if(!chk)return;chk.checked=!chk.checked;row.classList.toggle('cq-sel',chk.checked);syncSelAll();updTotalCobro();}
 function toggleTodasCobro(){const chkAll=document.getElementById('chk-all-cobro');chkAll.checked=!chkAll.checked;document.querySelectorAll('.chk-cuota').forEach(c=>{c.checked=chkAll.checked;c.closest('.cuota-row').classList.toggle('cq-sel',chkAll.checked);});updTotalCobro();}
 function syncSelAll(){const chks=[...document.querySelectorAll('.chk-cuota')];const chkAll=document.getElementById('chk-all-cobro');if(chkAll)chkAll.checked=chks.length>0&&chks.every(c=>c.checked);}
-function updTotalCobro(){const sel=[...document.querySelectorAll('.chk-cuota:checked')];const total=sel.length*vc();const el=document.getElementById('cobro-total');const sub=document.getElementById('cobro-ncuotas');if(el)el.textContent=`$ ${total.toLocaleString('es-CL')}`;if(sub)sub.textContent=`${sel.length} cuota${sel.length!==1?'s':''} seleccionada${sel.length!==1?'s':''}`;}
+function updTotalCobro(){const sel=[...document.querySelectorAll('.chk-cuota:checked')];const total=sel.length*vc();const el=document.getElementById('cobro-total');const sub=document.getElementById('cobro-ncuotas');if(el)el.textContent=`$ ${total.toLocaleString('es-CL')}`;if(sub)sub.textContent=`${sel.length} cuota${sel.length!==1?'s':''}  seleccionada${sel.length!==1?'s':''}`;}
 async function registrarPagoMultiple(){
   const sel=[...document.querySelectorAll('.chk-cuota:checked')];
   if(!sel.length){document.getElementById('cobro-msg').innerHTML='<div class="al ale">⚠️ Selecciona al menos una cuota.</div>';return;}
-  const metodo=document.getElementById('cobro-metodo').value;
-  const hoy=HOY.toLocaleDateString('es-CL');const cuotasPagadas=[];
+  const metodo=document.getElementById('cobro-metodo').value;const hoy=HOY.toLocaleDateString('es-CL');const cuotasPagadas=[];
   sel.forEach(chk=>{const idx=parseInt(chk.dataset.idx);datos[idx].estado='Pagado';datos[idx].formaPago=metodo;datos[idx].fechaPago=hoy;cuotasPagadas.push({...datos[idx]});});
   await guardarSilencioso();const ns=cobroNS;selSocioAdmin(ns);rTabla();rStats();mostrarResBanner();
-  document.getElementById('cobro-msg').innerHTML=`<div class="al alo">✅ ${cuotasPagadas.length} cuota${cuotasPagadas.length>1?'s registradas':'  registrada'}.</div>`;
+  document.getElementById('cobro-msg').innerHTML=`<div class="al alo">✅ ${cuotasPagadas.length} cuota${cuotasPagadas.length>1?'s':''}  registrada${cuotasPagadas.length>1?'s':''}.</div>`;
   mostrarVoucherCobro(cuotasPagadas,metodo);
 }
 
-// ══════════════════════════════════════════════
-//  COMPROBANTE
-// ══════════════════════════════════════════════
+// ══ COMPROBANTE ══
 function mostrarVoucherCobro(cuotas,metodo){
   const nom=cuotas[0]?.nombre||'—';const rut4=u4(cuotas[0]?.n_socio||'');const total=cuotas.length*vc();
   const num=`${HY}${String(HM+1).padStart(2,'0')}${String(HOY.getDate()).padStart(2,'0')}-${Math.floor(Math.random()*8000)+1000}`;
   const fStr=`${HOY.getDate()} de ${MESC[HM]} de ${HY}`;const metIco=metodo==='Efectivo'?'💵':metodo==='Transferencia'?'🏦':metodo==='Débito'?'💳':'📋';
-  const lineas=[`════════════════════════════`,`  ${cfg.nombre||'Club de Cuecas'}`,`  COMPROBANTE DE PAGO`,`  N° ${num}`,`════════════════════════════`,`Fecha   : ${fStr}`,`Socio   : ${nom}`,`RUT     : ···${rut4}`,``,`  DETALLE DE CUOTAS:`,...cuotas.map((d,i)=>`  ${String(i+1).padStart(2,'0')}. ${pLabel(d).padEnd(20)} ${fmt(vc())}`),``,`────────────────────────────`,`  TOTAL PAGADO : ${fmt(total)}`,`  Forma de pago: ${metodo}`,`────────────────────────────`,`${cfg.dir||''}`];
+  // Guardar en historial
+  const vou={id:Date.now(),numComp:num,fecha:fStr,timestamp:HOY.getTime(),socio:nom,rut4,cuotas:cuotas.map(d=>({periodo:pLabel(d),monto:vc()})),total,metodo};
+  vouchers.unshift(vou);sS('pf_vouchers',JSON.stringify(vouchers.slice(0,500)));
+  const lineas=[`════════════════════════════`,`  ${cfg.nombre||'Club de Cuecas'}`,`  COMPROBANTE DE PAGO`,`  N° ${num}`,`════════════════════════════`,`Fecha   : ${fStr}`,`Socio   : ${nom}`,`RUT     : ···${rut4}`,``,'  DETALLE DE CUOTAS:',...cuotas.map((d,i)=>`  ${String(i+1).padStart(2,'0')}. ${pLabel(d).padEnd(20)} ${fmt(vc())}`),``,`────────────────────────────`,`  TOTAL PAGADO : ${fmt(total)}`,`  Forma de pago: ${metodo}`,`────────────────────────────`,`${cfg.dir||''}`];
   lastVoucherText=lineas.join('\n');
   let filasTabla='';cuotas.forEach((d,i)=>{filasTabla+=`<tr><td style="color:#888;text-align:center;">${i+1}</td><td>${pLabel(d)}</td><td style="text-align:right;font-weight:700;color:var(--R);">${fmt(vc())}</td></tr>`;});
-  document.getElementById('voucher-content').innerHTML=`<div style="background:#fff;border:2px solid var(--O);border-radius:8px;padding:18px;font-size:.82rem;line-height:1.75;"><div style="text-align:center;border-bottom:2px solid var(--O);padding-bottom:12px;margin-bottom:14px;"><div style="font-family:var(--FD);font-size:1.08rem;font-weight:900;color:var(--MD);font-style:italic;">${cfg.nombre||'Club de Cuecas'}</div><div style="font-size:.68rem;color:var(--M);font-style:italic;">${cfg.sub||''}</div><div style="display:inline-block;background:var(--R);color:white;font-weight:700;font-size:.78rem;padding:3px 12px;border-radius:3px;margin-top:6px;">COMPROBANTE DE PAGO</div><div style="font-size:.67rem;color:#999;margin-top:4px;">N° ${num} &nbsp;·&nbsp; ${fStr}</div></div><div style="background:rgba(92,58,30,.04);border-radius:5px;padding:9px 12px;margin-bottom:11px;"><div style="display:flex;justify-content:space-between;"><span style="color:var(--M);font-style:italic;">Socio</span><strong>${nom}</strong></div><div style="display:flex;justify-content:space-between;"><span style="color:var(--M);font-style:italic;">RUT</span><strong>···${rut4}</strong></div></div><table class="vou-table"><thead><tr><th style="width:28px;text-align:center;">#</th><th>Período</th><th style="text-align:right;">Monto</th></tr></thead><tbody>${filasTabla}</tbody></table><div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px dashed rgba(92,58,30,.15);margin-top:4px;"><span style="color:var(--M);font-style:italic;">Forma de pago</span><strong>${metIco} ${metodo}</strong></div><div style="background:linear-gradient(135deg,var(--MD),var(--M));color:white;border-radius:6px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center;margin-top:10px;"><span style="font-size:.85rem;opacity:.9;">💰 Total pagado</span><span style="font-family:var(--FD);font-size:1.45rem;font-weight:900;color:var(--OL);">${fmt(total)}</span></div>${cfg.dir?`<div style="font-size:.67rem;color:#aaa;text-align:center;margin-top:9px;font-style:italic;">${cfg.dir}</div>`:''}</div>`;
+  document.getElementById('voucher-content').innerHTML=`<div style="background:#fff;border:2px solid var(--O);border-radius:8px;padding:18px;font-size:.82rem;line-height:1.75;"><div style="text-align:center;border-bottom:2px solid var(--O);padding-bottom:12px;margin-bottom:14px;"><div style="font-family:var(--FD);font-size:1.08rem;font-weight:900;color:var(--MD);font-style:italic;">${cfg.nombre||'Club de Cuecas'}</div><div style="font-size:.68rem;color:var(--M);font-style:italic;">${cfg.sub||''}</div><div style="display:inline-block;background:var(--R);color:white;font-weight:700;font-size:.78rem;padding:3px 12px;border-radius:3px;margin-top:6px;">COMPROBANTE DE PAGO</div><div style="font-size:.67rem;color:#999;margin-top:4px;">N° ${num} &nbsp;·&nbsp; ${fStr}</div></div><div style="background:rgba(30,58,92,.04);border-radius:5px;padding:9px 12px;margin-bottom:11px;"><div style="display:flex;justify-content:space-between;"><span style="color:var(--M);font-style:italic;">Socio</span><strong>${nom}</strong></div><div style="display:flex;justify-content:space-between;"><span style="color:var(--M);font-style:italic;">RUT</span><strong>···${rut4}</strong></div></div><table class="vou-table"><thead><tr><th style="width:28px;text-align:center;">#</th><th>Período</th><th style="text-align:right;">Monto</th></tr></thead><tbody>${filasTabla}</tbody></table><div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px dashed rgba(30,58,92,.12);margin-top:4px;"><span style="color:var(--M);font-style:italic;">Forma de pago</span><strong>${metIco} ${metodo}</strong></div><div style="background:linear-gradient(135deg,var(--MD),var(--M));color:white;border-radius:6px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center;margin-top:10px;"><span style="font-size:.85rem;opacity:.9;">💰 Total pagado</span><span style="font-family:var(--FD);font-size:1.45rem;font-weight:900;color:var(--OL);">${fmt(total)}</span></div>${cfg.dir?`<div style="font-size:.67rem;color:#aaa;text-align:center;margin-top:9px;font-style:italic;">${cfg.dir}</div>`:''}</div>`;
   document.getElementById('modal-voucher').classList.add('open');setTimeout(lanzarConfeti,300);
 }
 function copiarVoucher(btn){navigator.clipboard.writeText(lastVoucherText).then(()=>{btn.textContent='✅ ¡Copiado!';setTimeout(()=>btn.textContent='📋 Copiar texto',2500);});}
 
-// ══════════════════════════════════════════════
-//  ESTADÍSTICAS
-// ══════════════════════════════════════════════
+// ══ COMPROBANTES — HISTORIAL ══
+function rVouchers(){
+  const el=document.getElementById('vr-content');if(!el)return;
+  const totalM=vouchers.reduce((s,v)=>s+(v.total||0),0);
+  const sociDiv=[...new Set(vouchers.map(v=>v.socio))].length;
+  let h=`<div class="vr-stats"><div class="vr-stat vrs1"><div class="vr-sn">${vouchers.length}</div><div class="vr-sl">Comprobantes</div></div><div class="vr-stat vrs2"><div class="vr-sn big">${fmt(totalM)}</div><div class="vr-sl">Total recaudado</div></div><div class="vr-stat vrs3"><div class="vr-sn">${sociDiv}</div><div class="vr-sl">Socios distintos</div></div></div>`;
+  if(!vouchers.length){el.innerHTML=h+`<div class="al ali">Aún no se han emitido comprobantes desde esta app.</div>`;return;}
+  const fqEl=document.getElementById('vr-q');const fq=(fqEl?.value||'').toLowerCase();
+  const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');const fqn=norm(fq);
+  const vf=vouchers.filter(v=>!fqn||norm(v.socio).includes(fqn)||v.rut4.includes(fq));
+  h+=`<div class="ig" style="margin-bottom:10px;"><input type="text" id="vr-q" placeholder="🔍 Filtrar por nombre o RUT…" oninput="rVouchers()" value="${fq}" style="width:100%;padding:9px 12px;font-size:.83rem;"/></div>`;
+  h+=`<div style="font-size:.73rem;font-style:italic;color:var(--M);margin-bottom:6px;">${vf.length} resultado${vf.length!==1?'s':''} · mostrando los más recientes primero</div>`;
+  h+=`<div class="tl">`;
+  vf.forEach((v,i)=>{
+    const pers=v.cuotas.map(c=>c.periodo).join(', ');
+    h+=`<div class="vr-row"><div class="vr-num">#${vouchers.indexOf(v)+1}</div><div class="vr-body"><div class="vr-nom">${v.socio}</div><div class="vr-det">RUT ···${v.rut4} · ${pers} · ${v.metodo}</div></div><div style="text-align:right;"><div class="vr-monto">${fmt(v.total)}</div><div class="vr-fecha">${v.fecha}</div></div></div>`;
+  });
+  h+=`</div><div style="margin-top:11px;display:flex;gap:7px;flex-wrap:wrap;"><button class="btn bm sm" onclick="exportarVouchersCSV()">📥 Exportar CSV</button><button class="btn bgr sm" onclick="if(confirm('¿Borrar todo el historial de comprobantes?')){vouchers=[];sS('pf_vouchers','[]');rVouchers();}">🗑️ Borrar historial</button></div>`;
+  el.innerHTML=h;
+}
+function exportarVouchersCSV(){
+  if(!vouchers.length)return;
+  const rows=[['N°','Fecha','Socio','RUT','Períodos','Total','Método','N° Comprobante']];
+  vouchers.forEach((v,i)=>rows.push([i+1,v.fecha,v.socio,'···'+v.rut4,v.cuotas.map(c=>c.periodo).join(' | '),v.total,v.metodo,v.numComp||'']));
+  const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}));
+  a.download=`comprobantes_${cfg.nombre.replace(/\s+/g,'_')}_${HY}${String(HM+1).padStart(2,'0')}.csv`;a.click();
+}
+
+// ══ ESTADÍSTICAS ══
 function rStats(){
   const el=document.getElementById('sc');if(!el)return;
   if(!datos.length){el.innerHTML='<div class="al ali">Cargando datos desde Google Sheets…</div>';return;}
   const socios=[...new Set(datos.map(d=>d.n_socio))];const tot=socios.length,dm=dMap();
   const alDia=socios.filter(ns=>dm[ns]===0).length,leve=socios.filter(ns=>dm[ns]>=1&&dm[ns]<=2).length,moroso=socios.filter(ns=>dm[ns]>=3).length;
   const pct=Math.round(alDia/tot*100),totM=Object.values(dm).reduce((a,v)=>a+v,0)*vc();
-  const nNA=datos.filter(d=>tipoE(d.estado)==='noapli').length;
-  const top=socios.filter(ns=>dm[ns]>0).sort((a,b)=>dm[b]-dm[a]).slice(0,5);
+  const nNA=datos.filter(d=>tipoE(d.estado)==='noapli').length;const top=socios.filter(ns=>dm[ns]>0).sort((a,b)=>dm[b]-dm[a]).slice(0,5);
   let h=`<div class="sg"><div class="sb sm2"><div class="sn">${tot}</div><div class="sl">Total socios</div></div><div class="sb sgo"><div class="sn">${pct}<span style="font-size:1.1rem;">%</span></div><div class="sl">Socios al día</div></div><div class="sb sr"><div class="sn">${tot-alDia}</div><div class="sl">Con deuda activa</div></div><div class="sb so"><div class="sn big">${fmt(totM)}</div><div class="sl">Total pendiente</div></div></div>
   ${nNA>0?`<div class="al ali" style="margin-bottom:10px;">⚪ <strong>${nNA} registros "No Aplica"</strong> excluidos del cálculo de deuda.</div>`:''}
   <div class="card" style="margin:0 0 12px;"><div class="ct">🚦 Semáforo de Morosidad</div>
   <div class="sem-row" style="background:#e8f5e9;border-radius:5px;margin-bottom:5px;"><span>🟢 Al día</span><strong>${alDia}</strong></div>
   <div class="sem-row" style="background:#fff8e1;border-radius:5px;margin-bottom:5px;"><span>🟡 Mora leve (1–2)</span><strong>${leve}</strong></div>
-  <div class="sem-row" style="background:#fde8e8;border-radius:5px;"><span>🔴 Moroso/a (3+)</span><strong style="color:var(--R);">${moroso}</strong></div></div>`;
+  <div class="sem-row" style="background:#fde8e8;border-radius:5px;"><span>🔴 Moroso/a (3+)</span><strong style="color:#8B1A1A;">${moroso}</strong></div></div>`;
   if(moroso>0)h+=`<div class="al ale" style="margin-bottom:12px;">🚨 <strong>${moroso} socio${moroso>1?'s tienen':' tiene'} 3 o más cuotas impagas.</strong></div>`;
-  if(top.length){
-    h+=`<div class="card" style="margin:0;"><div class="ct">📊 Socios con mayor deuda</div><div class="tl">`;
-    top.forEach((ns,i)=>{const nom=(datos.find(d=>d.n_socio===ns)||{}).nombre||ns;const sem=getSem(dm[ns]);h+=`<div class="tlr"><span class="trk">${i+1}°</span><span style="flex:1;font-size:.82rem;font-weight:600;">${nom}</span><span style="display:flex;align-items:center;gap:6px;"><span style="font-size:.8rem;color:var(--R);font-style:italic;">${fmt(dm[ns]*vc())}</span><span class="tag ti">${dm[ns]} cta${dm[ns]>1?'s':''}</span>${sem.ico}</span></div>`;});
-    h+='</div></div>';
-  }
+  if(top.length){h+=`<div class="card" style="margin:0;"><div class="ct">📊 Socios con mayor deuda</div><div class="tl">`;top.forEach((ns,i)=>{const nom=(datos.find(d=>d.n_socio===ns)||{}).nombre||ns;const sem=getSem(dm[ns]);h+=`<div class="tlr"><span class="trk">${i+1}°</span><span style="flex:1;font-size:.82rem;font-weight:600;">${nom}</span><span style="display:flex;align-items:center;gap:6px;"><span style="font-size:.8rem;color:#8B1A1A;font-style:italic;">${fmt(dm[ns]*vc())}</span><span class="tag ti">${dm[ns]} cta${dm[ns]>1?'s':''}</span>${sem.ico}</span></div>`;});h+='</div></div>';}
   el.innerHTML=h;
 }
 
-// ══════════════════════════════════════════════
-//  COMUNICACIONES
-// ══════════════════════════════════════════════
+// ══ COMUNICACIONES ══
+function pobAviso(){
+  const txt=document.getElementById('av-txt');const on=document.getElementById('av-on');const tipo=document.getElementById('av-tipo');
+  if(txt)txt.value=aviso.texto||'';if(on)on.checked=aviso.activo||false;
+  if(tipo){Array.from(tipo.options).forEach(o=>o.selected=(o.value===aviso.tipo));}
+}
 function pobWA(){
-  const sel=document.getElementById('was'),cur=sel.value;
-  sel.innerHTML='<option value="">— Selecciona un socio —</option>';
+  const sel=document.getElementById('was'),cur=sel.value;sel.innerHTML='<option value="">— Selecciona un socio —</option>';
   if(!datos.length){document.getElementById('waempty').style.display='block';return;}
   document.getElementById('waempty').style.display='none';
-  const dSoc={},nSoc={};
-  datos.forEach(d=>{if(esImpagoPasado(d)){dSoc[d.n_socio]=dSoc[d.n_socio]||[];dSoc[d.n_socio].push(d);nSoc[d.n_socio]=d.nombre;}});
+  const dSoc={},nSoc={};datos.forEach(d=>{if(esImpagoPasado(d)){dSoc[d.n_socio]=dSoc[d.n_socio]||[];dSoc[d.n_socio].push(d);nSoc[d.n_socio]=d.nombre;}});
   Object.keys(dSoc).sort((a,b)=>(nSoc[a]||'').localeCompare(nSoc[b]||'','es')).forEach(ns=>{const o=document.createElement('option');o.value=ns;o.textContent=`${nSoc[ns]} (${dSoc[ns].length} cuota${dSoc[ns].length>1?'s':''})`;if(ns===cur)o.selected=true;sel.appendChild(o);});
   if(cur)genWA();
 }
 function genWA(){
   const ns=document.getElementById('was').value,area=document.getElementById('wap-area');
   if(!ns){area.style.display='none';return;}
-  const regs=datos.filter(d=>d.n_socio===ns&&esImpagoPasado(d));
-  if(!regs.length){area.style.display='none';return;}
+  const regs=datos.filter(d=>d.n_socio===ns&&esImpagoPasado(d));if(!regs.length){area.style.display='none';return;}
   const nom=regs[0].nombre,pers=regs.map(d=>pLabel(d)).join(', '),tot=regs.length*vc();
   const msg=`Estimado/a ${nom},\n\nLe saluda el *${cfg.nombre||'Club de Cuecas'}*.\n\nLe informamos que registra *${regs.length} cuota${regs.length>1?'s':''} pendiente${regs.length>1?'s':''}* correspondiente${regs.length>1?'s':''} a:\n📅 ${pers}\n💰 Total adeudado: *${fmt(tot)}*\n\nLe solicitamos regularizar su situación a la brevedad.${cfg.tel?'\nTeléfono: '+cfg.tel:''}${cfg.dir?'\nDirección: '+cfg.dir:''}\n\n¡Muchas gracias y saludos cordiales!`;
   document.getElementById('wam').textContent=msg;area.style.display='block';
 }
 function dCSV(){
-  const m=document.getElementById('csvmsg');
-  if(!datos.length){m.innerHTML='<div class="al ale">❌ No hay datos cargados.</div>';return;}
-  const dm=dMap(),imp=datos.filter(d=>esImpagoPasado(d));
-  if(!imp.length){m.innerHTML='<div class="al alo">✅ No hay socios con deuda pendiente.</div>';return;}
+  const m=document.getElementById('csvmsg');if(!datos.length){m.innerHTML='<div class="al ale">❌ No hay datos cargados.</div>';return;}
+  const dm=dMap(),imp=datos.filter(d=>esImpagoPasado(d));if(!imp.length){m.innerHTML='<div class="al alo">✅ No hay socios con deuda pendiente.</div>';return;}
   const rows=[['Nombre','RUT (últimos 4)','Período','Monto','Estado','Semáforo','Total adeudado']];
   imp.forEach(d=>rows.push([d.nombre,`···${u4(d.n_socio)}`,pLabel(d),fmt(vc()),d.estado,getSem(dm[d.n_socio]||0).txt,fmt((dm[d.n_socio]||0)*vc())]));
   const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
@@ -1168,22 +886,16 @@ function dCSV(){
   m.innerHTML='<div class="al alo">✅ CSV descargado.</div>';setTimeout(()=>m.innerHTML='',3000);
 }
 
-// ══════════════════════════════════════════════
-//  CONFIGURACIÓN
-// ══════════════════════════════════════════════
+// ══ CONFIGURACIÓN ══
 function pCfgForm(){
-  document.getElementById('cn').value=cfg.nombre||'';document.getElementById('cs').value=cfg.sub||'';
-  document.getElementById('cl').value=cfg.lema||'';document.getElementById('cd').value=cfg.dir||'';
-  document.getElementById('ct2').value=cfg.tel||'';document.getElementById('ctes').value=cfg.telTes||'';
-  document.getElementById('ccorreo').value=cfg.correo||'';document.getElementById('cbco').value=cfg.banco||'';
-  document.getElementById('cvc').value=cfg.valorCuota||5000;
+  document.getElementById('cn').value=cfg.nombre||'';document.getElementById('cs').value=cfg.sub||'';document.getElementById('cl').value=cfg.lema||'';
+  document.getElementById('cd').value=cfg.dir||'';document.getElementById('ct2').value=cfg.tel||'';document.getElementById('ctes').value=cfg.telTes||'';
+  document.getElementById('ccorreo').value=cfg.correo||'';document.getElementById('cbco').value=cfg.banco||'';document.getElementById('cvc').value=cfg.valorCuota||5000;
 }
 async function gCfg(){
-  cfg.nombre=document.getElementById('cn').value.trim()||'A Compás de Picaflor';
-  cfg.sub=document.getElementById('cs').value.trim();cfg.lema=document.getElementById('cl').value.trim();
-  cfg.dir=document.getElementById('cd').value.trim();cfg.tel=document.getElementById('ct2').value.trim();
-  cfg.telTes=document.getElementById('ctes').value.trim();cfg.correo=document.getElementById('ccorreo').value.trim();
-  cfg.banco=document.getElementById('cbco').value.trim();
+  cfg.nombre=document.getElementById('cn').value.trim()||'A Compás de Picaflor';cfg.sub=document.getElementById('cs').value.trim();cfg.lema=document.getElementById('cl').value.trim();
+  cfg.dir=document.getElementById('cd').value.trim();cfg.tel=document.getElementById('ct2').value.trim();cfg.telTes=document.getElementById('ctes').value.trim();
+  cfg.correo=document.getElementById('ccorreo').value.trim();cfg.banco=document.getElementById('cbco').value.trim();
   const v=parseFloat(document.getElementById('cvc').value);cfg.valorCuota=(!isNaN(v)&&v>0)?v:5000;
   updHdr();const r=await sS('pf_cfg',JSON.stringify(cfg));
   const m=document.getElementById('cfgmsg');m.innerHTML=r?'<div class="al alo">✅ Configuración guardada.</div>':'<div class="al ale">❌ Error al guardar.</div>';
