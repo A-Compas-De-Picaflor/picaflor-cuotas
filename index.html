@@ -426,25 +426,6 @@ tr:hover td{background:rgba(232,160,32,0.06);}
     <div id="tab-config-content" style="display:none">
       <div class="card">
         <div class="card-title">⚙️ Configuración</div>
-          <h4>🔌 Conexión Airtable</h4>
-          <p style="font-size:12px;color:var(--texto2);margin-bottom:12px;">Estos datos se guardan solo en tu navegador y nunca se publican en el código.</p>
-          <div class="grid2">
-            <div>
-              <label class="lbl">Token de acceso personal</label>
-              <div style="display:flex;gap:6px;align-items:center;">
-                <input type="text" id="cfg-at-token" placeholder="patXXXXXX..." autocomplete="off" style="flex:1;font-family:'IBM Plex Mono',monospace;font-size:12px;"/>
-                <button onclick="limpiarToken()" class="btn-danger btn-sm" title="Borrar token">🗑</button>
-              </div>
-            </div>
-            <div><label class="lbl">ID de la base (appXXXXXX)</label><input type="text" id="cfg-at-base" placeholder="appXXXXXX..." autocomplete="off"/></div>
-          </div>
-          <div style="display:flex;gap:8px;margin-top:8px;margin-bottom:4px;">
-            <button class="btn-primary btn-sm" onclick="guardarConexionAirtable()">💾 Guardar conexión</button>
-            <button class="btn-secondary btn-sm" onclick="probarConexionAirtable()">🔗 Probar conexión</button>
-          </div>
-          <div id="cfg-at-status" style="font-size:12px;margin-top:6px;"></div>
-        </div>
-        <div class="config-section">
           <h4>Datos del Club</h4>
           <div class="grid2">
             <div><label class="lbl">Nombre del Club</label><input type="text" id="cfg-nombre"/></div>
@@ -504,10 +485,8 @@ tr:hover td{background:rgba(232,160,32,0.06);}
 <script>
 
 // ===== CONSTANTES =====
-// Tokens Airtable — guardados en localStorage, nunca en el código
-function getAT_TOKEN(){ return localStorage.getItem('acdp_at_token')||''; }
-function getAT_BASE(){  return localStorage.getItem('acdp_at_base')||''; }
-function getAT_URL(){   return `https://api.airtable.com/v0/${getAT_BASE()}`; }
+// Proxy Google Apps Script — token seguro en el servidor
+const PROXY_URL = 'https://script.google.com/macros/s/AKfycbx9DSg1xgZv2sNQ9OtAnLHw5czypYt8U1KUZcYCB0RHD-i1IgK5JSrlZuzToQlDWdU/exec';
 const PASS     = 'picaflor2025';
 const MESES    = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
@@ -540,59 +519,40 @@ function applyDark() {
 }
 
 // ===== AIRTABLE API =====
-async function atGet(tabla, formula) {
-  let url = `${getAT_URL()}/${encodeURIComponent(tabla)}?pageSize=100`;
-  if(formula) url += `&filterByFormula=${encodeURIComponent(formula)}`;
-  let records = [], offset;
-  do {
-    const r = await fetch(url+(offset?`&offset=${offset}`:''), {headers:{'Authorization':`Bearer ${getAT_TOKEN()}`}});
-    const d = await r.json();
-    if(d.error) throw new Error(d.error.message);
-    records = records.concat(d.records||[]);
-    offset = d.offset;
-  } while(offset);
-  return records;
-}
-async function atCreate(tabla, fields) {
-  const r = await fetch(`${getAT_URL()}/${encodeURIComponent(tabla)}`, {
-    method:'POST', headers:{'Authorization':`Bearer ${getAT_TOKEN()}`,'Content-Type':'application/json'},
-    body: JSON.stringify({records:[{fields}]})
+async function proxyCall(action, tabla, extra={}) {
+  const r = await fetch(PROXY_URL, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({action, tabla, ...extra})
   });
   const d = await r.json();
-  if(d.error) throw new Error(d.error.message);
-  return d.records[0];
+  if(!d.ok) throw new Error(d.error || 'Error en proxy');
+  return d.data;
+}
+async function atGet(tabla, formula) {
+  // GET via URL params para evitar CORS preflight
+  let url = `${PROXY_URL}?action=get&tabla=${encodeURIComponent(tabla)}`;
+  if(formula) url += `&formula=${encodeURIComponent(formula)}`;
+  const r = await fetch(url);
+  const d = await r.json();
+  if(!d.ok) throw new Error(d.error || 'Error proxy get');
+  return d.data;
+}
+async function atCreate(tabla, fields) {
+  return proxyCall('create', tabla, {fields});
 }
 async function atUpdate(tabla, id, fields) {
-  await fetch(`${getAT_URL()}/${encodeURIComponent(tabla)}/${id}`, {
-    method:'PATCH', headers:{'Authorization':`Bearer ${getAT_TOKEN()}`,'Content-Type':'application/json'},
-    body: JSON.stringify({fields})
-  });
+  return proxyCall('update', tabla, {id, fields});
 }
 async function atDelete(tabla, id) {
-  await fetch(`${getAT_URL()}/${encodeURIComponent(tabla)}/${id}`, {
-    method:'DELETE', headers:{'Authorization':`Bearer ${getAT_TOKEN()}`}
-  });
+  return proxyCall('delete', tabla, {id});
 }
-async function atBatchCreate(tabla, arr) {
-  const ids = [];
-  for(let i=0;i<arr.length;i+=10) {
-    const r = await fetch(`${getAT_URL()}/${encodeURIComponent(tabla)}`, {
-      method:'POST', headers:{'Authorization':`Bearer ${getAT_TOKEN()}`,'Content-Type':'application/json'},
-      body: JSON.stringify({records: arr.slice(i,i+10).map(f=>({fields:f}))})
-    });
-    const d = await r.json();
-    if(d.error) throw new Error(d.error.message+' ('+tabla+')');
-    (d.records||[]).forEach(r=>ids.push(r.id));
-  }
-  return ids;
+async function atBatchCreate(tabla, records) {
+  const result = await proxyCall('batchCreate', tabla, {records});
+  return (result||[]).map(r=>r.id);
 }
 async function atBatchDelete(tabla, ids) {
-  for(let i=0;i<ids.length;i+=10) {
-    const params = ids.slice(i,i+10).map(id=>`records[]=${encodeURIComponent(id)}`).join('&');
-    await fetch(`${getAT_URL()}/${encodeURIComponent(tabla)}?${params}`, {
-      method:'DELETE', headers:{'Authorization':`Bearer ${getAT_TOKEN()}`}
-    });
-  }
+  return proxyCall('batchDelete', tabla, {ids});
 }
 
 // ===== CAMPO NAMES (Airtable exact) =====
@@ -728,14 +688,6 @@ function logout() {
 }
 
 async function iniciarApp(nombre='') {
-  if (!getAT_TOKEN() || !getAT_BASE()) {
-    // Sin token — mostrar aviso en Config
-    document.getElementById('login-screen').style.display='none';
-    document.getElementById('app').style.display='block';
-    toast('⚠ Configura la conexión a Airtable en ⚙️ Config', 'error');
-    showTab('config');
-    return;
-  }
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='block';
   const soloRes = ROL==='directiva';
@@ -1357,7 +1309,7 @@ function showTab(t){
   if(t==='resumen') renderResumen();
   if(t==='socios') renderSocios();
   if(t==='cuotas'){renderCuotas();buildBulkNaBtns();}
-  if(t==='config'){aplicarConfig();renderRutsDirectiva();cargarConexionUI();}
+  if(t==='config'){aplicarConfig();renderRutsDirectiva();}
   if(t==='grafico'){actualizarAnios();setTimeout(renderGrafico,100);}
 }
 
@@ -1560,58 +1512,7 @@ async function guardarEdicionSocio(id) {
 
 
 // ===== CONEXIÓN AIRTABLE =====
-function limpiarToken() {
-  localStorage.removeItem('acdp_at_token');
-  localStorage.removeItem('acdp_at_base');
-  const tf = document.getElementById('cfg-at-token');
-  const bf = document.getElementById('cfg-at-base');
-  if(tf) tf.value = '';
-  if(bf) bf.value = '';
-  const st = document.getElementById('cfg-at-status');
-  if(st) st.innerHTML = '<span style="color:var(--texto2);">Token eliminado. Ingresa el nuevo token y guarda.</span>';
-  toast('Token eliminado. Ingresa el nuevo.', 'info');
-}
-function cargarConexionUI() {
-  const token = localStorage.getItem('acdp_at_token') || '';
-  const base  = localStorage.getItem('acdp_at_base')  || '';
-  const tf = document.getElementById('cfg-at-token');
-  const bf = document.getElementById('cfg-at-base');
-  // Mostrar token real en el campo (es tipo password, solo lo ve el tesorero)
-  if (tf) tf.value = token;
-  if (bf) bf.value = base;
-  const st = document.getElementById('cfg-at-status');
-  if (st && token && base) {
-    st.innerHTML = '<span style="color:var(--verde);">✓ Conexión configurada — usa \'Probar conexión\' para verificar</span>';
-  }
-}
-function guardarConexionAirtable() {
-  const tokenInput = document.getElementById('cfg-at-token').value.trim();
-  const base       = document.getElementById('cfg-at-base').value.trim();
-  if (!tokenInput || !base) {
-    document.getElementById('cfg-at-status').innerHTML =
-      '<span style="color:var(--rojo);">⚠ Completa ambos campos.</span>';
-    return;
-  }
-  localStorage.setItem('acdp_at_token', tokenInput);
-  localStorage.setItem('acdp_at_base', base);
-  document.getElementById('cfg-at-status').innerHTML =
-    '<span style="color:var(--verde);">✓ Conexión guardada en este navegador</span>';
-  toast('Conexión Airtable guardada ✓', 'success');
-}
-async function probarConexionAirtable() {
-  const st = document.getElementById('cfg-at-status');
-  if (!getAT_TOKEN() || !getAT_BASE()) {
-    st.innerHTML = '<span style="color:var(--rojo);">⚠ Ingresa el token y la base primero.</span>';
-    return;
-  }
-  st.innerHTML = '<span style="color:var(--texto2);">Probando conexión...</span>';
-  try {
-    const recs = await atGet('Config');
-    st.innerHTML = `<span style="color:var(--verde);">✅ Conexión exitosa — ${recs.length} registros en Config</span>`;
-  } catch(e) {
-    st.innerHTML = `<span style="color:var(--rojo);">❌ Error: ${e.message}</span>`;
-  }
-}
+// Conexión vía proxy Google Apps Script — sin config local necesaria
 
 // ===== DIRECTIVA AUTORIZADA =====
 let rutsDirectiva = []; // lista de RUTs autorizados
