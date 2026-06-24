@@ -519,18 +519,16 @@ function applyDark() {
 }
 
 // ===== AIRTABLE API =====
+// Todas las llamadas via GET con payload en parámetro para evitar CORS preflight
 async function proxyCall(action, tabla, extra={}) {
-  const r = await fetch(PROXY_URL, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({action, tabla, ...extra})
-  });
+  const payload = encodeURIComponent(JSON.stringify({action, tabla, ...extra}));
+  const url = `${PROXY_URL}?action=${action}&tabla=${encodeURIComponent(tabla)}&payload=${payload}`;
+  const r = await fetch(url);
   const d = await r.json();
   if(!d.ok) throw new Error(d.error || 'Error en proxy');
   return d.data;
 }
 async function atGet(tabla, formula) {
-  // GET via URL params para evitar CORS preflight
   let url = `${PROXY_URL}?action=get&tabla=${encodeURIComponent(tabla)}`;
   if(formula) url += `&formula=${encodeURIComponent(formula)}`;
   const r = await fetch(url);
