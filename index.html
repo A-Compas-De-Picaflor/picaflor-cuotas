@@ -907,7 +907,7 @@ function eliminarItem(tipo,idx) {
 // ===== DATOS =====
 async function cargarDatos() {
   try {
-    const [movRecs,socRecs] = await Promise.all([atGet('Movimientos'),atGet('Socios')]);
+    const [movRecs,socRecs] = await Promise.all([atGet('Movimientos'),atGet('Socios'),cargarCuotasAirtable()]);
     movimientos = movRecs.map(normMov).sort((a,b)=>b.numero-a.numero);
     socios = socRecs.map(normSocio).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
     actualizarAnios();
@@ -1431,7 +1431,7 @@ function showTab(t){
   if(t==='detalle') renderDetalle();
   if(t==='resumen') renderResumen();
   if(t==='socios') renderSocios();
-  if(t==='cuotas'){renderCuotas();buildBulkNaBtns();}
+  if(t==='cuotas'){if(!cuotasCargadas)cargarCuotasAirtable().then(()=>renderCuotas());else renderCuotas();buildBulkNaBtns();}
   if(t==='config'){aplicarConfig();renderRutsDirectiva();cargarTokenUI();}
   if(t==='grafico'){actualizarAnios();setTimeout(renderGrafico,100);}
 }
@@ -1450,17 +1450,49 @@ function toast(msg,type='success'){
 // ===== CUOTAS =====
 const VALOR_CUOTA = 5000;
 
-function getCuotasData(){
-  try{return JSON.parse(localStorage.getItem('acdp_cuotas')||'{}');}catch(e){return {};}
+// Cache en memoria para evitar llamadas repetidas
+let cuotasCache = {}; // { socio_id: { anio: { mes: { estado, recId } } } }
+let cuotasCargadas = false;
+
+async function cargarCuotasAirtable() {
+  const recs = await atGet('Cuotas');
+  cuotasCache = {};
+  recs.forEach(r => {
+    const {socio_id, anio, mes, estado} = r.fields;
+    if(!cuotasCache[socio_id]) cuotasCache[socio_id] = {};
+    if(!cuotasCache[socio_id][anio]) cuotasCache[socio_id][anio] = {};
+    cuotasCache[socio_id][anio][mes] = {estado: estado||'', recId: r.id};
+  });
+  cuotasCargadas = true;
 }
-function saveCuotasData(d){localStorage.setItem('acdp_cuotas',JSON.stringify(d));}
-function getEstadoCelda(sid,anio,idx){return getCuotasData()[sid]?.[anio]?.[idx]||'';}
-function setEstadoCelda(sid,anio,idx,est){
-  const d=getCuotasData();
-  if(!d[sid])d[sid]={};if(!d[sid][anio])d[sid][anio]={};
-  d[sid][anio][idx]=est;saveCuotasData(d);
+
+function getEstadoCelda(sid, anio, idx) {
+  return cuotasCache[sid]?.[anio]?.[idx]?.estado || '';
 }
+
+async function setEstadoCelda(sid, anio, idx, est) {
+  const existing = cuotasCache[sid]?.[anio]?.[idx];
+  if(!cuotasCache[sid]) cuotasCache[sid] = {};
+  if(!cuotasCache[sid][anio]) cuotasCache[sid][anio] = {};
+
+  if(existing?.recId) {
+    // Actualizar registro existente
+    if(est === '') {
+      await atDelete('Cuotas', existing.recId);
+      delete cuotasCache[sid][anio][idx];
+    } else {
+      await atUpdate('Cuotas', existing.recId, {estado: est});
+      cuotasCache[sid][anio][idx] = {estado: est, recId: existing.recId};
+    }
+  } else if(est !== '') {
+    // Crear nuevo registro
+    const rec = await atCreate('Cuotas', {socio_id: sid, anio: Number(anio), mes: Number(idx), estado: est});
+    cuotasCache[sid][anio][idx] = {estado: est, recId: rec.id};
+  }
+}
+
 function ciclarEstado(e){return({'':'impago','impago':'pagado','pagado':'na','na':'previo','previo':''})[e]??'';}
+
 function mesFuturo(anio,idx){
   const h=new Date();return(Number(anio)>h.getFullYear())||(Number(anio)===h.getFullYear()&&idx>h.getMonth());
 }
@@ -1468,16 +1500,17 @@ function mesVencido(anio,idx){
   return new Date()>new Date(Number(anio),idx+1,0);
 }
 function calcDeudaSocio(sid,anio){
-  const data=getCuotasData()[sid]?.[anio]||{};
-  let d=0;for(let i=0;i<12;i++){
-    const est=data[i]||'';
+  const data=cuotasCache[sid]?.[anio]||{};
+  let d=0;
+  for(let i=0;i<12;i++){
+    const est=(data[i]?.estado)||'';
     if(est==='impago'&&mesVencido(anio,i))d+=VALOR_CUOTA;
   }
   return d;
 }
 function tieneDatosSocio(sid,anio){
-  const data=getCuotasData()[sid]?.[anio]||{};
-  return Object.values(data).some(e=>e&&e!=='previo');
+  const data=cuotasCache[sid]?.[anio]||{};
+  return Object.values(data).some(e=>e.estado&&e.estado!=='previo');
 }
 function iconoEstado(est,fut){
   if(fut)return '<span style="color:#ddd;">—</span>';
@@ -1495,20 +1528,36 @@ function buildBulkNaBtns(){
   const c=document.getElementById('bulk-na-btns');if(!c)return;
   c.innerHTML=MESES.map((m,i)=>`<button class="mes-bulk-btn" onclick="marcarMesNATodos(${i})">${m.slice(0,3)}</button>`).join('');
 }
-function marcarMesNATodos(idx){
+async function marcarMesNATodos(idx){
   const anio=document.getElementById('cuotas-anio')?.value||new Date().getFullYear().toString();
   if(!confirm(`Marcar ${MESES[idx]} ${anio} como NA para TODOS los socios?`))return;
-  const d=getCuotasData();
-  socios.forEach(s=>{if(!d[s.id])d[s.id]={};if(!d[s.id][anio])d[s.id][anio]={};d[s.id][anio][idx]='na';});
-  saveCuotasData(d);renderCuotas();toast(MESES[idx]+' marcado NA para todos','success');
-}
-function toggleCelda(sid,anio,idx){
-  setEstadoCelda(sid,anio,idx,ciclarEstado(getEstadoCelda(sid,anio,idx)));
+  toast('Guardando...','info');
+  for(const s of socios){
+    await setEstadoCelda(s.id,anio,idx,'na');
+  }
   renderCuotas();
+  toast(MESES[idx]+' marcado NA para todos ✓','success');
 }
-function marcarMesesPagados(sid,mesesStr,anio){
+async function toggleCelda(sid,anio,idx){
+  const nuevo = ciclarEstado(getEstadoCelda(sid,anio,idx));
+  // Actualizar UI inmediatamente
+  if(!cuotasCache[sid]) cuotasCache[sid]={};
+  if(!cuotasCache[sid][anio]) cuotasCache[sid][anio]={};
+  const recId = cuotasCache[sid][anio][idx]?.recId;
+  if(nuevo==='') delete cuotasCache[sid][anio][idx];
+  else cuotasCache[sid][anio][idx] = {estado:nuevo, recId};
+  renderCuotas();
+  // Guardar en Airtable en segundo plano
+  try { await setEstadoCelda(sid,anio,idx,nuevo); }
+  catch(e){ toast('Error guardando: '+e.message,'error'); }
+}
+async function marcarMesesPagados(sid,mesesStr,anio){
   if(!sid||!mesesStr)return;
-  mesesStr.split(',').forEach(m=>{const i=MESES.indexOf(m.trim());if(i>=0)setEstadoCelda(sid,anio,i,'pagado');});
+  const meses=mesesStr.split(',').map(m=>m.trim());
+  for(const m of meses){
+    const i=MESES.indexOf(m);
+    if(i>=0) await setEstadoCelda(sid,anio,i,'pagado');
+  }
 }
 function renderCuotas(){
   const anio=document.getElementById('cuotas-anio')?.value||new Date().getFullYear().toString();
@@ -1550,7 +1599,7 @@ function exportarCuotasExcel(){
   const anio=document.getElementById('cuotas-anio')?.value||new Date().getFullYear().toString();
   const header=['Socio','RUT',...MESES,'Deuda Total'];
   const rows=socios.filter(s=>s.activo).map(s=>{
-    const mr=MESES.map((m,i)=>{const e=getEstadoCelda(s.id,anio,i);return e==='pagado'?'Pagado':e==='impago'?'Impago':e==='na'?'NA':'';});
+    const mr=MESES.map((m,i)=>{const e=getEstadoCelda(s.id,anio,i);return e==='pagado'?'Pagado':e==='impago'?'Impago':e==='na'?'NA':e==='previo'?'No Socio':'';});
     return[s.nombre,s.rut,...mr,calcDeudaSocio(s.id,anio)];
   });
   const ws=XLSX.utils.aoa_to_sheet([header,...rows]);
@@ -1559,7 +1608,7 @@ function exportarCuotasExcel(){
 }
 function mostrarVistaSocio(socio){
   const anio=new Date().getFullYear().toString();
-  const d=getCuotasData();const data=d[socio.id]?.[anio]||{};
+  const data=cuotasCache[socio.id]?.[anio]||{};
   const deuda=calcDeudaSocio(socio.id,anio);
   const club=getConf('nombre_club','Club de Cueca');
   const f2=n=>n.toLocaleString('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0});
@@ -1567,7 +1616,7 @@ function mostrarVistaSocio(socio){
   if(!ps){ps=document.createElement('div');ps.id='socio-screen';document.body.appendChild(ps);}
   ps.style.cssText='min-height:100vh;background:linear-gradient(135deg,#1a3a5c 0%,#245080 60%,#0f6e56 100%);display:flex;align-items:flex-start;justify-content:center;padding:30px 16px;';
   const mesesHtml=MESES.map((m,i)=>{
-    const fut=mesFuturo(anio,i);const est=data[i]||'';
+    const fut=mesFuturo(anio,i);const est=data[i]?.estado||'';
     let cls='vacio',ico='—',lbl='Sin definir';
     if(fut){cls='vacio';ico='—';lbl='Próximo';}
     else if(est==='pagado'){cls='pagado';ico='✅';lbl='Pagado';}
@@ -1767,7 +1816,7 @@ function toggleMarcadoDesde() {
   if (wrap) wrap.style.display = modo === 'desde' ? 'flex' : 'none';
 }
 
-function confirmarMarcadoAnual() {
+async function confirmarMarcadoAnual() {
   const socioId  = document.getElementById('marcado-socio').value;
   const anio     = document.getElementById('marcado-anio').value;
   const estado   = document.getElementById('marcado-estado').value;
@@ -1785,15 +1834,11 @@ function confirmarMarcadoAnual() {
 
   if (!confirm(`Marcar ${msgModo} como ${estadoLabel} para:\n${socio.nombre}\n\n¿Confirmas?`)) return;
 
-  const d = getCuotasData();
-  if (!d[socioId]) d[socioId] = {};
-  if (!d[socioId][anio]) d[socioId][anio] = {};
-
+  toast('Guardando...','info');
   const mesInicio = modo === 'desde' ? desdeMes : 0;
   for (let i = mesInicio; i < 12; i++) {
-    d[socioId][anio][String(i)] = estado;
+    await setEstadoCelda(socioId, anio, String(i), estado);
   }
-  saveCuotasData(d);
   document.getElementById('panel-marcado-anual').style.display = 'none';
   renderCuotas();
   toast(`${socio.nombre} — ${msgModo} → ${estadoLabel} ✓`, 'success');
