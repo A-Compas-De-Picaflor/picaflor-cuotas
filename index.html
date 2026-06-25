@@ -413,6 +413,41 @@ tr:hover td{background:rgba(232,160,32,0.06);}
           <span><span style="display:inline-block;width:14px;height:14px;background:#f0f0f4;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>⚪ No Aplica</span>
           <span style="color:var(--texto2);font-style:italic;">Clic en celda para cambiar estado</span>
         </div>
+        <!-- Buscador por nombre -->
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:200px;position:relative;">
+            <input type="text" id="cuotas-buscar" placeholder="🔍 Buscar socio por nombre..." 
+              oninput="filtrarCuotas()" 
+              style="width:100%;padding:8px 12px;background:var(--bg3);border:1.5px solid var(--borde);border-radius:8px;color:var(--texto);font-size:13px;outline:none;"/>
+          </div>
+          <button class="btn-secondary btn-sm" onclick="abrirMarcadoAnual()" title="Marcar año completo a un socio">📅 Marcar año completo</button>
+        </div>
+        <!-- Panel marcado anual -->
+        <div id="panel-marcado-anual" style="display:none;background:var(--bg3);border:1.5px solid var(--accent);border-radius:10px;padding:16px;margin-bottom:14px;">
+          <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:12px;">📅 Marcar año completo a un socio</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;flex-wrap:wrap;">
+            <div>
+              <label class="lbl">Socio</label>
+              <select id="marcado-socio" style="width:100%;"></select>
+            </div>
+            <div>
+              <label class="lbl">Año</label>
+              <select id="marcado-anio" style="width:100%;"></select>
+            </div>
+            <div>
+              <label class="lbl">Estado</label>
+              <select id="marcado-estado" style="width:100%;">
+                <option value="pagado">✅ Pagado</option>
+                <option value="impago">❌ Impago</option>
+                <option value="na">⚪ No Aplica</option>
+              </select>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <button class="btn-primary btn-sm" onclick="confirmarMarcadoAnual()">Aplicar</button>
+              <button class="btn-secondary btn-sm" onclick="document.getElementById('panel-marcado-anual').style.display='none'">×</button>
+            </div>
+          </div>
+        </div>
         <div style="margin-bottom:12px;">
           <span style="font-size:12px;font-weight:600;color:var(--texto2);margin-right:6px;">Marcar mes NA para todos:</span>
           <div id="bulk-na-btns" style="display:inline-flex;flex-wrap:wrap;gap:4px;margin-top:4px;"></div>
@@ -1384,6 +1419,8 @@ function renderCuotas(){
   let sf=socios.filter(s=>s.activo);
   if(filtro==='deuda')sf=sf.filter(s=>calcDeudaSocio(s.id,anio)>0);
   if(filtro==='aldia')sf=sf.filter(s=>calcDeudaSocio(s.id,anio)===0);
+  // Filtro por nombre búsqueda
+  if(cuotasFiltro) sf=sf.filter(s=>s.nombre.toLowerCase().includes(cuotasFiltro)||s.rut.toLowerCase().includes(cuotasFiltro));
   const f2=n=>n.toLocaleString('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0});
   let html=`<table class="cuotas-table"><thead><tr><th class="col-nombre">Socio</th>${MESES.map(m=>`<th>${m.slice(0,3)}</th>`).join('')}<th style="min-width:90px;text-align:right;">Deuda</th></tr></thead><tbody>`;
   let totalDeuda=0,conDeuda=0;
@@ -1555,6 +1592,62 @@ function eliminarRutDirectiva(idx) {
 function guardarRutsDirectiva() {
   localStorage.setItem('acdp_dir_ruts', JSON.stringify(rutsDirectiva));
   toast('Lista de directiva guardada ✓', 'success');
+}
+
+
+// ===== MARCADO ANUAL =====
+let cuotasFiltro = ''; // texto búsqueda activo
+
+function filtrarCuotas() {
+  cuotasFiltro = (document.getElementById('cuotas-buscar')?.value || '').toLowerCase().trim();
+  renderCuotas();
+}
+
+function abrirMarcadoAnual() {
+  const panel = document.getElementById('panel-marcado-anual');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  if (panel.style.display === 'none') return;
+
+  // Poblar selector de socios
+  const sel = document.getElementById('marcado-socio');
+  sel.innerHTML = socios.filter(s=>s.activo)
+    .sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'))
+    .map(s=>`<option value="${s.id}">${s.nombre} — ${s.rut}</option>`)
+    .join('');
+
+  // Poblar selector de años
+  const selAnio = document.getElementById('marcado-anio');
+  const anioActual = new Date().getFullYear();
+  selAnio.innerHTML = '';
+  for (let y = anioActual + 1; y >= 2024; y--) {
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y;
+    if (y === anioActual) opt.selected = true;
+    selAnio.appendChild(opt);
+  }
+}
+
+function confirmarMarcadoAnual() {
+  const socioId = document.getElementById('marcado-socio').value;
+  const anio    = document.getElementById('marcado-anio').value;
+  const estado  = document.getElementById('marcado-estado').value;
+  const socio   = socios.find(s=>s.id===socioId);
+  if (!socio) return;
+
+  const estadoLabel = estado==='pagado'?'✅ Pagado':estado==='impago'?'❌ Impago':'⚪ No Aplica';
+  if (!confirm(`Marcar TODO el año ${anio} como ${estadoLabel} para:\n${socio.nombre}\n\n¿Confirmas?`)) return;
+
+  const d = getCuotasData();
+  if (!d[socioId]) d[socioId] = {};
+  if (!d[socioId][anio]) d[socioId][anio] = {};
+  for (let i = 0; i < 12; i++) {
+    d[socioId][anio][String(i)] = estado;
+  }
+  saveCuotasData(d);
+  document.getElementById('panel-marcado-anual').style.display = 'none';
+  renderCuotas();
+  toast(`${socio.nombre} — ${anio} marcado como ${estadoLabel} ✓`, 'success');
 }
 
 // ===== SPLASH =====
