@@ -424,8 +424,12 @@ tr:hover td{background:rgba(232,160,32,0.06);}
         </div>
         <!-- Panel marcado anual -->
         <div id="panel-marcado-anual" style="display:none;background:var(--bg3);border:1.5px solid var(--accent);border-radius:10px;padding:16px;margin-bottom:14px;">
-          <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:12px;">📅 Marcar año completo a un socio</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;flex-wrap:wrap;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-size:13px;font-weight:700;color:var(--accent);">📅 Marcar cuotas a un socio</div>
+            <button class="btn-secondary btn-sm" onclick="document.getElementById('panel-marcado-anual').style.display='none'">× Cerrar</button>
+          </div>
+          <!-- Fila 1: Socio + Año + Estado -->
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin-bottom:12px;">
             <div>
               <label class="lbl">Socio</label>
               <select id="marcado-socio" style="width:100%;"></select>
@@ -435,17 +439,33 @@ tr:hover td{background:rgba(232,160,32,0.06);}
               <select id="marcado-anio" style="width:100%;"></select>
             </div>
             <div>
-              <label class="lbl">Estado</label>
+              <label class="lbl">Estado a aplicar</label>
               <select id="marcado-estado" style="width:100%;">
                 <option value="pagado">✅ Pagado</option>
                 <option value="impago">❌ Impago</option>
                 <option value="na">⚪ No Aplica</option>
               </select>
             </div>
-            <div style="display:flex;gap:6px;">
-              <button class="btn-primary btn-sm" onclick="confirmarMarcadoAnual()">Aplicar</button>
-              <button class="btn-secondary btn-sm" onclick="document.getElementById('panel-marcado-anual').style.display='none'">×</button>
+          </div>
+          <!-- Fila 2: Modo -->
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <label style="font-size:12px;color:var(--texto2);font-weight:600;">APLICAR:</label>
+            <label style="font-size:13px;color:var(--texto);cursor:pointer;">
+              <input type="radio" name="marcado-modo" value="anual" checked onchange="toggleMarcadoDesde()"> Todo el año
+            </label>
+            <label style="font-size:13px;color:var(--texto);cursor:pointer;">
+              <input type="radio" name="marcado-modo" value="desde" onchange="toggleMarcadoDesde()"> Desde un mes en adelante
+            </label>
+            <div id="marcado-desde-wrap" style="display:none;align-items:center;gap:6px;">
+              <label class="lbl" style="margin:0;">Desde:</label>
+              <select id="marcado-desde-mes" style="width:auto;">
+                <option value="0">Enero</option><option value="1">Febrero</option><option value="2">Marzo</option>
+                <option value="3">Abril</option><option value="4">Mayo</option><option value="5">Junio</option>
+                <option value="6">Julio</option><option value="7">Agosto</option><option value="8">Septiembre</option>
+                <option value="9">Octubre</option><option value="10">Noviembre</option><option value="11">Diciembre</option>
+              </select>
             </div>
+            <button class="btn-primary btn-sm" onclick="confirmarMarcadoAnual()" style="margin-left:auto;">✔ Aplicar</button>
           </div>
         </div>
         <div style="margin-bottom:12px;">
@@ -615,7 +635,7 @@ function normSocio(r) {
     nombre: f.nombre || f.Nombre || f.Name || '',
     rut:    f.rut || f.RUT || '',
     email:  f.email || f.Email || '',
-    activo: f.activo === undefined ? true : (f.activo === true || f.activo === 1),
+    activo: f.activo === undefined ? true : (f.activo === true || f.activo === 1 || f.activo === 'si'),
   };
 }
 
@@ -1214,7 +1234,15 @@ async function agregarSocio() {
   }catch(e){toast('Error: '+e.message,'error');}
 }
 async function toggleSocio(id,activo){
-  try{await atUpdate('Socios',id,{activo});socios=socios.map(s=>s.id===id?{...s,activo}:s);renderSocios();renderMorosidad();}
+  const val = activo === true || activo === 1 || activo === 'true' || activo === 'si';
+  const valStr = val ? 'si' : 'no';
+  try{
+    await atUpdate('Socios',id,{activo: valStr});
+    socios=socios.map(s=>s.id===id?{...s,activo:val}:s);
+    renderSocios();
+    if(typeof renderMorosidad==='function') renderMorosidad();
+    toast(val?'Socio activado ✓':'Socio desactivado ✓','success');
+  }
   catch(e){toast('Error: '+e.message,'error');}
 }
 async function eliminarSocio(id){
@@ -1628,26 +1656,42 @@ function abrirMarcadoAnual() {
   }
 }
 
+function toggleMarcadoDesde() {
+  const modo = document.querySelector('input[name="marcado-modo"]:checked')?.value;
+  const wrap = document.getElementById('marcado-desde-wrap');
+  if (wrap) wrap.style.display = modo === 'desde' ? 'flex' : 'none';
+}
+
 function confirmarMarcadoAnual() {
-  const socioId = document.getElementById('marcado-socio').value;
-  const anio    = document.getElementById('marcado-anio').value;
-  const estado  = document.getElementById('marcado-estado').value;
-  const socio   = socios.find(s=>s.id===socioId);
+  const socioId  = document.getElementById('marcado-socio').value;
+  const anio     = document.getElementById('marcado-anio').value;
+  const estado   = document.getElementById('marcado-estado').value;
+  const modo     = document.querySelector('input[name="marcado-modo"]:checked')?.value || 'anual';
+  const desdeMes = parseInt(document.getElementById('marcado-desde-mes')?.value || '0');
+  const socio    = socios.find(s=>s.id===socioId);
   if (!socio) return;
 
   const estadoLabel = estado==='pagado'?'✅ Pagado':estado==='impago'?'❌ Impago':'⚪ No Aplica';
-  if (!confirm(`Marcar TODO el año ${anio} como ${estadoLabel} para:\n${socio.nombre}\n\n¿Confirmas?`)) return;
+  const MESES_NOMBRES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  const msgModo = modo==='anual'
+    ? `todo el año ${anio}`
+    : `desde ${MESES_NOMBRES[desdeMes]} hasta Diciembre ${anio}`;
+
+  if (!confirm(`Marcar ${msgModo} como ${estadoLabel} para:\n${socio.nombre}\n\n¿Confirmas?`)) return;
 
   const d = getCuotasData();
   if (!d[socioId]) d[socioId] = {};
   if (!d[socioId][anio]) d[socioId][anio] = {};
-  for (let i = 0; i < 12; i++) {
+
+  const mesInicio = modo === 'desde' ? desdeMes : 0;
+  for (let i = mesInicio; i < 12; i++) {
     d[socioId][anio][String(i)] = estado;
   }
   saveCuotasData(d);
   document.getElementById('panel-marcado-anual').style.display = 'none';
   renderCuotas();
-  toast(`${socio.nombre} — ${anio} marcado como ${estadoLabel} ✓`, 'success');
+  toast(`${socio.nombre} — ${msgModo} → ${estadoLabel} ✓`, 'success');
 }
 
 // ===== SPLASH =====
