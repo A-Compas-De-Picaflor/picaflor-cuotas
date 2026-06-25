@@ -731,7 +731,9 @@ async function loginSocio4() {
       document.getElementById('login-err').textContent='No se encontró ningún socio con esos dígitos.';
     } else if(matches.length===1){
       ROL='consulta';
+      document.getElementById('login-loading').textContent='Cargando cuotas...';
       await cargarConfig();
+      await cargarCuotasAirtable();
       mostrarVistaSocio(matches[0]);
     } else {
       document.getElementById('login-paso1').style.display='none';
@@ -748,7 +750,13 @@ async function loginSocioFull() {
     const recs = await atGet('Socios');
     const todos = recs.map(normSocio).filter(s=>s.activo);
     const match = todos.find(s=>s.rut.replace(/\s/g,'').toLowerCase()===rut.replace(/\s/g,'').toLowerCase());
-    if(match){ROL='consulta';await cargarConfig();mostrarVistaSocio(match);}
+    if(match){
+      ROL='consulta';
+      document.getElementById('login-loading').textContent='Cargando cuotas...';
+      await cargarConfig();
+      await cargarCuotasAirtable();
+      mostrarVistaSocio(match);
+    }
     else document.getElementById('login-err').textContent='RUT no encontrado.';
   } catch(e){document.getElementById('login-err').textContent='Error: '+e.message;}
   document.getElementById('login-loading').textContent='';
