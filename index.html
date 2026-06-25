@@ -130,6 +130,8 @@ tr:hover td{background:rgba(232,160,32,0.06);}
 .celda-cuota.pagado{background:#0d2b1a;color:#2ecc71;}
 .celda-cuota.impago{background:#2b0d0a;color:#e74c3c;}
 .celda-cuota.na{background:#1e2a42;color:#8891aa;}
+.celda-cuota.previo{background:#1a1f2e;color:#4a5068;font-size:12px;}
+.socio-mes-card.previo{background:#1a1f2e;border-color:#2a3050;}
 .celda-cuota.vacio{background:transparent;color:#ddd;}
 .celda-cuota.futuro{background:transparent;color:#eee;cursor:default;}
 .badge-deuda{display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;background:#2b0d0a;color:#e74c3c;}
@@ -411,6 +413,7 @@ tr:hover td{background:rgba(232,160,32,0.06);}
           <span><span style="display:inline-block;width:14px;height:14px;background:#e1f5ee;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>✅ Pagado</span>
           <span><span style="display:inline-block;width:14px;height:14px;background:#fcebeb;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>❌ Impago</span>
           <span><span style="display:inline-block;width:14px;height:14px;background:#f0f0f4;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>⚪ No Aplica</span>
+          <span><span style="display:inline-block;width:14px;height:14px;background:#1a1f2e;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>🔒 No Socio</span>
           <span style="color:var(--texto2);font-style:italic;">Clic en celda para cambiar estado</span>
         </div>
         <!-- Buscador por nombre -->
@@ -1456,7 +1459,7 @@ function setEstadoCelda(sid,anio,idx,est){
   if(!d[sid])d[sid]={};if(!d[sid][anio])d[sid][anio]={};
   d[sid][anio][idx]=est;saveCuotasData(d);
 }
-function ciclarEstado(e){return({'':'impago','impago':'pagado','pagado':'na','na':''})[e]??'';}
+function ciclarEstado(e){return({'':'impago','impago':'pagado','pagado':'na','na':'previo','previo':''})[e]??'';}
 function mesFuturo(anio,idx){
   const h=new Date();return(Number(anio)>h.getFullYear())||(Number(anio)===h.getFullYear()&&idx>h.getMonth());
 }
@@ -1465,17 +1468,26 @@ function mesVencido(anio,idx){
 }
 function calcDeudaSocio(sid,anio){
   const data=getCuotasData()[sid]?.[anio]||{};
-  let d=0;for(let i=0;i<12;i++){if((data[i]||'')==='impago'&&mesVencido(anio,i))d+=VALOR_CUOTA;}
+  let d=0;for(let i=0;i<12;i++){
+    const est=data[i]||'';
+    if(est==='impago'&&mesVencido(anio,i))d+=VALOR_CUOTA;
+  }
   return d;
+}
+function tieneDatosSocio(sid,anio){
+  const data=getCuotasData()[sid]?.[anio]||{};
+  return Object.values(data).some(e=>e&&e!=='previo');
 }
 function iconoEstado(est,fut){
   if(fut)return '<span style="color:#ddd;">—</span>';
   if(est==='pagado')return '✅';if(est==='impago')return '❌';if(est==='na')return '⚪';
+  if(est==='previo')return '🔒';
   return '<span style="color:#ddd;">·</span>';
 }
 function claseEstado(est,fut){
   if(fut)return 'futuro';
-  if(est==='pagado')return 'pagado';if(est==='impago')return 'impago';if(est==='na')return 'na';
+  if(est==='pagado')return 'pagado';if(est==='impago')return 'impago';
+  if(est==='na')return 'na';if(est==='previo')return 'previo';
   return 'vacio';
 }
 function buildBulkNaBtns(){
@@ -1519,7 +1531,10 @@ function renderCuotas(){
       const clk=fut?'':`onclick="toggleCelda('${s.id}','${anio}',${i})"`;
       html+=`<td><div class="celda-cuota ${cls}" ${clk} title="${MESES[i]}: ${est||'sin definir'}">${ico}</div></td>`;
     });
-    const dh=deuda>0?`<span class="badge-deuda">${f2(deuda)}</span>`:`<span class="badge-ok">Al día</span>`;
+    const sinDatos=!tieneDatosSocio(s.id,anio);
+    const dh=deuda>0?`<span class="badge-deuda">${f2(deuda)}</span>`:
+             sinDatos?`<span style="color:#4a5068;font-size:11px;">Sin registro</span>`:
+             `<span class="badge-ok">Al día</span>`;
     html+=`<td class="col-deuda">${dh}</td></tr>`;
   });
   html+='</tbody></table>';el.innerHTML=html;
@@ -1553,6 +1568,7 @@ function mostrarVistaSocio(socio){
     else if(est==='pagado'){cls='pagado';ico='✅';lbl='Pagado';}
     else if(est==='impago'){cls='impago';ico='❌';lbl='Impago';}
     else if(est==='na'){cls='na';ico='⚪';lbl='No Aplica';}
+    else if(est==='previo'){cls='previo';ico='🔒';lbl='No era socio';}
     return`<div class="socio-mes-card ${cls}"><div style="font-size:20px;">${ico}</div><div style="font-size:12px;font-weight:600;margin-top:4px;">${m}</div><div style="font-size:10px;color:#666;margin-top:2px;">${lbl}</div></div>`;
   }).join('');
   const deudaHtml=deuda>0
