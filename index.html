@@ -540,8 +540,7 @@ tr:hover td{background:rgba(232,160,32,0.06);}
 <script>
 
 // ===== CONSTANTES =====
-// Proxy Google Apps Script — token seguro en el servidor
-const PROXY_URL = 'https://script.google.com/macros/s/AKfycbx9DSg1xgZv2sNQ9OtAnLHw5czypYt8U1KUZcYCB0RHD-i1IgK5JSrlZuzToQlDWdU/exec';
+// Token Airtable guardado en localStorage
 const PASS     = 'picaflor2025';
 const MESES    = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
@@ -574,36 +573,74 @@ function applyDark() {
 }
 
 // ===== AIRTABLE API =====
-// Todas las llamadas via GET con payload en parámetro para evitar CORS preflight
-async function proxyCall(action, tabla, extra={}) {
-  const body = JSON.stringify({action, tabla, ...extra});
-  const r = await fetch(PROXY_URL, {
-    method:'POST',
-    headers:{'Content-Type':'text/plain'},
-    body
-  });
-  const d = await r.json();
-  if(!d.ok) throw new Error(d.error || 'Error en proxy');
-  return d.data;
-}
+// Token guardado en localStorage — nunca en el código
+const AT_BASE = 'appbwZa4nb9EExUHQ';
+const AT_URL  = `https://api.airtable.com/v0/${AT_BASE}`;
+function getToken(){ return localStorage.getItem('acdp_at_token')||''; }
+
 async function atGet(tabla, formula) {
-  return proxyCall('get', tabla, formula ? {formula} : {});
+  let url = `${AT_URL}/${encodeURIComponent(tabla)}?pageSize=100`;
+  if(formula) url += `&filterByFormula=${encodeURIComponent(formula)}`;
+  let records = [], offset;
+  do {
+    const r = await fetch(url+(offset?`&offset=${offset}`:''), {
+      headers:{'Authorization':`Bearer ${getToken()}`}
+    });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error.message);
+    records = records.concat(d.records||[]);
+    offset = d.offset;
+  } while(offset);
+  return records;
 }
 async function atCreate(tabla, fields) {
-  return proxyCall('create', tabla, {fields});
+  const r = await fetch(`${AT_URL}/${encodeURIComponent(tabla)}`, {
+    method:'POST',
+    headers:{'Authorization':`Bearer ${getToken()}`,'Content-Type':'application/json'},
+    body: JSON.stringify({records:[{fields}]})
+  });
+  const d = await r.json();
+  if(d.error) throw new Error(d.error.message);
+  return d.records[0];
 }
 async function atUpdate(tabla, id, fields) {
-  return proxyCall('update', tabla, {id, fields});
+  const r = await fetch(`${AT_URL}/${encodeURIComponent(tabla)}/${id}`, {
+    method:'PATCH',
+    headers:{'Authorization':`Bearer ${getToken()}`,'Content-Type':'application/json'},
+    body: JSON.stringify({fields})
+  });
+  const d = await r.json();
+  if(d.error) throw new Error(d.error.message);
+  return d;
 }
 async function atDelete(tabla, id) {
-  return proxyCall('delete', tabla, {id});
+  await fetch(`${AT_URL}/${encodeURIComponent(tabla)}/${id}`, {
+    method:'DELETE',
+    headers:{'Authorization':`Bearer ${getToken()}`}
+  });
 }
-async function atBatchCreate(tabla, records) {
-  const result = await proxyCall('batchCreate', tabla, {records});
-  return (result||[]).map(r=>r.id);
+async function atBatchCreate(tabla, arr) {
+  const ids = [];
+  for(let i=0;i<arr.length;i+=10){
+    const r = await fetch(`${AT_URL}/${encodeURIComponent(tabla)}`, {
+      method:'POST',
+      headers:{'Authorization':`Bearer ${getToken()}`,'Content-Type':'application/json'},
+      body: JSON.stringify({records:arr.slice(i,i+10).map(f=>({fields:f}))})
+    });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error.message);
+    (d.records||[]).forEach(rec=>ids.push(rec.id));
+  }
+  return ids;
 }
 async function atBatchDelete(tabla, ids) {
-  return proxyCall('batchDelete', tabla, {ids});
+  for(let i=0;i<ids.length;i+=10){
+    const params=ids.slice(i,i+10).map(id=>`records[]=${encodeURIComponent(id)}`).join('&');
+    await fetch(`${AT_URL}/${encodeURIComponent(tabla)}?${params}`, {
+      method:'DELETE',
+      headers:{'Authorization':`Bearer ${getToken()}`}
+    });
+  }
 }
 
 // ===== CAMPO NAMES (Airtable exact) =====
@@ -1378,7 +1415,7 @@ function showTab(t){
   if(t==='resumen') renderResumen();
   if(t==='socios') renderSocios();
   if(t==='cuotas'){renderCuotas();buildBulkNaBtns();}
-  if(t==='config'){aplicarConfig();renderRutsDirectiva();}
+  if(t==='config'){aplicarConfig();renderRutsDirectiva();cargarTokenUI();}
   if(t==='grafico'){actualizarAnios();setTimeout(renderGrafico,100);}
 }
 
@@ -1582,8 +1619,34 @@ async function guardarEdicionSocio(id) {
 
 
 
-// ===== CONEXIÓN AIRTABLE =====
-// Conexión vía proxy Google Apps Script — sin config local necesaria
+
+// ===== TOKEN AIRTABLE =====
+function cargarTokenUI() {
+  const tf = document.getElementById('cfg-at-token');
+  if(tf) tf.value = localStorage.getItem('acdp_at_token') || '';
+  const st = document.getElementById('cfg-at-status');
+  if(st && localStorage.getItem('acdp_at_token')) {
+    st.innerHTML = '<span style="color:var(--verde);">✓ Token configurado</span>';
+  }
+}
+function guardarToken() {
+  const val = document.getElementById('cfg-at-token').value.trim();
+  if(!val){toast('Ingresa el token primero.','error');return;}
+  localStorage.setItem('acdp_at_token', val);
+  document.getElementById('cfg-at-status').innerHTML = '<span style="color:var(--verde);">✓ Token guardado</span>';
+  toast('Token guardado ✓','success');
+}
+async function probarToken() {
+  const st = document.getElementById('cfg-at-status');
+  st.innerHTML = '<span style="color:var(--texto2);">Probando...</span>';
+  try {
+    const recs = await atGet('Config');
+    st.innerHTML = `<span style="color:var(--verde);">✅ Conexión exitosa — ${recs.length} registros</span>`;
+  } catch(e) {
+    st.innerHTML = `<span style="color:var(--rojo);">❌ Error: ${e.message}</span>`;
+  }
+}
+
 
 // ===== DIRECTIVA AUTORIZADA =====
 let rutsDirectiva = []; // lista de RUTs autorizados
