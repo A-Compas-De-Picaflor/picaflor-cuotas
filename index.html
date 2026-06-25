@@ -1259,16 +1259,20 @@ async function importarSocios(){
   const data=await file.arrayBuffer();
   const wb=XLSX.read(data);
   const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-  const nuevos=rows.map(r=>({
-    nombre:String(r.nombre||r.Nombre||r.name||'').trim(),
-    rut:String(r.rut||r.RUT||r.Rut||'').trim(),
-    email:String(r.email||r.Email||'').trim(),
-  })).filter(r=>r.nombre&&r.rut);
+  const nuevos=rows.map(r=>{
+    const activoRaw=String(r.activo||r.Activo||r.ACTIVO||'si').trim().toLowerCase();
+    const activoVal = (activoRaw==='no'||activoRaw==='n'||activoRaw==='0') ? 'no' : 'si';
+    return {
+      nombre:String(r.nombre||r.Nombre||r.name||'').trim(),
+      rut:String(r.rut||r.RUT||r.Rut||'').trim(),
+      email:String(r.email||r.Email||'').trim(),
+      activo:activoVal,
+    };
+  }).filter(r=>r.nombre&&r.rut);
   if(!nuevos.length){toast('No se encontraron filas válidas (columnas: nombre, rut, email).','error');return;}
   toast('Importando '+nuevos.length+' socios...','info');
   try{
-    const ids=await atBatchCreate('Socios',nuevos);
-    await Promise.all(ids.map(id=>atUpdate('Socios',id,{activo:true})));
+    await atBatchCreate('Socios',nuevos);
     await cargarDatos();
     renderSocios();
     toast(nuevos.length+' socios importados ✓','success');
