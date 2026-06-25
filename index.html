@@ -588,12 +588,7 @@ async function proxyCall(action, tabla, extra={}) {
   return d.data;
 }
 async function atGet(tabla, formula) {
-  let url = `${PROXY_URL}?action=get&tabla=${encodeURIComponent(tabla)}`;
-  if(formula) url += `&formula=${encodeURIComponent(formula)}`;
-  const r = await fetch(url);
-  const d = await r.json();
-  if(!d.ok) throw new Error(d.error || 'Error proxy get');
-  return d.data;
+  return proxyCall('get', tabla, formula ? {formula} : {});
 }
 async function atCreate(tabla, fields) {
   return proxyCall('create', tabla, {fields});
