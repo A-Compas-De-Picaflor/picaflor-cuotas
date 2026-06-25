@@ -1515,7 +1515,7 @@ function renderCuotas(){
   const filtro=document.getElementById('cuotas-filtro')?.value||'todos';
   const el=document.getElementById('cuotas-table');if(!el)return;
   if(!socios.length){el.innerHTML='<p style="padding:24px;text-align:center;color:var(--texto2);">Sin socios. Agrega socios en la pestaña 👥 Socios.</p>';return;}
-  let sf=socios.filter(s=>s.activo);
+  let sf=socios.slice();
   if(filtro==='deuda')sf=sf.filter(s=>calcDeudaSocio(s.id,anio)>0);
   if(filtro==='aldia')sf=sf.filter(s=>calcDeudaSocio(s.id,anio)===0);
   // Filtro por nombre búsqueda
@@ -1525,7 +1525,7 @@ function renderCuotas(){
   let totalDeuda=0,conDeuda=0;
   sf.forEach(s=>{
     const deuda=calcDeudaSocio(s.id,anio);totalDeuda+=deuda;if(deuda>0)conDeuda++;
-    html+=`<tr><td class="col-nombre">${s.nombre}<br><span style="font-size:10px;color:var(--texto2);">${s.rut}</span></td>`;
+    const op=s.activo?"":"opacity:.55;";const tag=s.activo?"":" <span style=\"font-size:9px;color:#666;\">[Inactivo]</span>";html+=`<tr><td class="col-nombre" style="${op}">${s.nombre}${tag}<br><span style="font-size:10px;color:var(--texto2);">${s.rut}</span></td>`;
     MESES.forEach((m,i)=>{
       const fut=mesFuturo(anio,i);const est=getEstadoCelda(s.id,anio,i);
       const cls=claseEstado(est,fut);const ico=iconoEstado(est,fut);
@@ -1533,14 +1533,18 @@ function renderCuotas(){
       html+=`<td><div class="celda-cuota ${cls}" ${clk} title="${MESES[i]}: ${est||'sin definir'}">${ico}</div></td>`;
     });
     const sinDatos=!tieneDatosSocio(s.id,anio);
-    const dh=deuda>0?`<span class="badge-deuda">${f2(deuda)}</span>`:
-             sinDatos?`<span style="color:#4a5068;font-size:11px;">Sin registro</span>`:
-             `<span class="badge-ok">Al día</span>`;
+    let dh;
+    if(!s.activo) dh='<span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;background:#2a2020;color:#888;">Inactivo</span>';
+    else if(deuda>0) dh=`<span class="badge-deuda">${f2(deuda)}</span>`;
+    else if(sinDatos) dh='<span style="color:#4a5068;font-size:11px;">Sin registro</span>';
+    else dh='<span class="badge-ok">Al día</span>';
     html+=`<td class="col-deuda">${dh}</td></tr>`;
   });
   html+='</tbody></table>';el.innerHTML=html;
+  const sfActivos=sf.filter(s=>s.activo);
+  const sfInactivos=sf.filter(s=>!s.activo);
   const res=document.getElementById('cuotas-resumen');
-  if(res)res.innerHTML=`<div><span style="color:var(--texto2);">Con deuda:</span> <strong style="color:var(--rojo);">${conDeuda}</strong></div><div><span style="color:var(--texto2);">Al día:</span> <strong style="color:var(--verde);">${sf.length-conDeuda}</strong></div><div><span style="color:var(--texto2);">Deuda total ${anio}:</span> <strong style="color:var(--rojo);font-size:15px;">${f2(totalDeuda)}</strong></div><div style="color:var(--texto2);font-size:11px;font-style:italic;">Cuota ${f2(VALOR_CUOTA)}/mes · Solo meses ❌ vencidos</div>`;
+  if(res)res.innerHTML=`<div><span style="color:var(--texto2);">Con deuda:</span> <strong style="color:var(--rojo);">${conDeuda}</strong></div><div><span style="color:var(--texto2);">Al día:</span> <strong style="color:var(--verde);">${sfActivos.filter(s=>calcDeudaSocio(s.id,anio)===0&&tieneDatosSocio(s.id,anio)).length}</strong></div><div><span style="color:var(--texto2);">Inactivos:</span> <strong style="color:#888;">${sfInactivos.length}</strong></div><div><span style="color:var(--texto2);">Deuda total ${anio}:</span> <strong style="color:var(--rojo);font-size:15px;">${f2(totalDeuda)}</strong></div><div style="color:var(--texto2);font-size:11px;font-style:italic;">Cuota ${f2(VALOR_CUOTA)}/mes · Solo meses ❌ vencidos</div>`;
 }
 function exportarCuotasExcel(){
   const anio=document.getElementById('cuotas-anio')?.value||new Date().getFullYear().toString();
