@@ -1261,7 +1261,7 @@ async function importarSocios(){
   const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
   const nuevos=rows.map(r=>{
     const activoRaw=String(r.activo||r.Activo||r.ACTIVO||'si').trim().toLowerCase();
-    const activoVal = (activoRaw==='no'||activoRaw==='n'||activoRaw==='0') ? 'no' : 'si';
+    const activoVal=(activoRaw==='no'||activoRaw==='n'||activoRaw==='0')?'no':'si';
     return {
       nombre:String(r.nombre||r.Nombre||r.name||'').trim(),
       rut:String(r.rut||r.RUT||r.Rut||'').trim(),
@@ -1269,9 +1269,15 @@ async function importarSocios(){
       activo:activoVal,
     };
   }).filter(r=>r.nombre&&r.rut);
-  if(!nuevos.length){toast('No se encontraron filas válidas (columnas: nombre, rut, email).','error');return;}
-  toast('Importando '+nuevos.length+' socios...','info');
+  if(!nuevos.length){toast('No se encontraron filas válidas.','error');return;}
+  if(!confirm(`Se borrarán los ${socios.length} socios actuales y se importarán ${nuevos.length} nuevos.\n\n¿Confirmas?`))return;
   try{
+    toast('Borrando socios existentes...','info');
+    if(socios.length){
+      const ids=socios.map(s=>s.id);
+      await atBatchDelete('Socios',ids);
+    }
+    toast('Importando '+nuevos.length+' socios...','info');
     await atBatchCreate('Socios',nuevos);
     await cargarDatos();
     renderSocios();
