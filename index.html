@@ -595,9 +595,22 @@ function applyDark() {
 
 // ===== AIRTABLE API =====
 // Token guardado en localStorage — nunca en el código
-const AT_BASE = 'appbwZa4nb9EExUHQ';
-const AT_URL  = `https://api.airtable.com/v0/${AT_BASE}`;
+const AT_BASE   = 'appbwZa4nb9EExUHQ';
+const AT_URL    = `https://api.airtable.com/v0/${AT_BASE}`;
+const PROXY_URL = 'https://script.google.com/macros/s/AKfycbyePNIgVlDdaZvtzof0u1k64hvIZfOnRpXtrMdBeVh89uc5PZJGzuhxMjDug23q-jg/exec';
 function getToken(){ return localStorage.getItem('acdp_at_token')||''; }
+
+// Para Cuotas usar proxy (Google Sheets), para el resto Airtable directo
+async function proxyPost(action, tabla, extra={}) {
+  const r = await fetch(PROXY_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain'},
+    body: JSON.stringify({action, tabla, ...extra})
+  });
+  const d = await r.json();
+  if(!d.ok) throw new Error(d.error||'Error proxy');
+  return d.data;
+}
 
 async function atGet(tabla, formula) {
   let url = `${AT_URL}/${encodeURIComponent(tabla)}?pageSize=100`;
@@ -1470,7 +1483,7 @@ let cuotasCache = {}; // { socio_id: { anio: { mes: { estado, recId } } } }
 let cuotasCargadas = false;
 
 async function cargarCuotasAirtable() {
-  const recs = await atGet('Cuotas');
+  const recs = await proxyPost('get','Cuotas');
   cuotasCache = {};
   recs.forEach(r => {
     const {socio_id, anio, mes, estado} = r.fields;
@@ -1491,17 +1504,15 @@ async function setEstadoCelda(sid, anio, idx, est) {
   if(!cuotasCache[sid][anio]) cuotasCache[sid][anio] = {};
 
   if(existing?.recId) {
-    // Actualizar registro existente
     if(est === '') {
-      await atDelete('Cuotas', existing.recId);
+      await proxyPost('delete','Cuotas',{id: existing.recId});
       delete cuotasCache[sid][anio][idx];
     } else {
-      await atUpdate('Cuotas', existing.recId, {estado: est});
+      await proxyPost('update','Cuotas',{id: existing.recId, fields:{estado: est}});
       cuotasCache[sid][anio][idx] = {estado: est, recId: existing.recId};
     }
   } else if(est !== '') {
-    // Crear nuevo registro
-    const rec = await atCreate('Cuotas', {socio_id: sid, anio: Number(anio), mes: Number(idx), estado: est});
+    const rec = await proxyPost('create','Cuotas',{fields:{socio_id: sid, anio: Number(anio), mes: Number(idx), estado: est}});
     cuotasCache[sid][anio][idx] = {estado: est, recId: rec.id};
   }
 }
