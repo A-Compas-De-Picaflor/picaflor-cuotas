@@ -65,7 +65,7 @@ body{font-family:'IBM Plex Sans','DM Sans',sans-serif;background:var(--bg);color
 .topbar-logout{background:rgba(255,255,255,0.15);border:none;color:white;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;}
 .busq-bar{background:var(--bg3);padding:6px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--borde);}
 .busq-bar input{flex:1;border:none;background:transparent;font-size:13px;outline:none;font-family:'IBM Plex Sans',sans-serif;color:var(--texto);}
-.tabs-bar{background:var(--bg2);border-bottom:1.5px solid var(--borde);display:flex;overflow-x:auto;padding:0 16px;}
+.tabs-bar{background:var(--bg2);border-bottom:1.5px solid var(--borde);display:flex;overflow-x:auto;padding:0 16px;position:sticky;top:56px;z-index:99;}
 .tab-btn{padding:14px 18px;border:none;background:transparent;font-size:13px;font-weight:500;color:var(--texto2);cursor:pointer;border-bottom:2.5px solid transparent;white-space:nowrap;transition:all .15s;}
 .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600;}
 .tab-btn:disabled{opacity:.35;cursor:not-allowed;}
@@ -133,7 +133,7 @@ tr:hover td{background:rgba(232,160,32,0.06);}
 .celda-cuota.previo{background:#1a1f2e;color:#4a5068;font-size:12px;}
 .socio-mes-card.previo{background:#1a1f2e;border-color:#2a3050;}
 .celda-cuota.vacio{background:transparent;color:#ddd;}
-.celda-cuota.futuro{background:transparent;color:#eee;cursor:default;}
+.celda-cuota.futuro{background:transparent;color:#555;cursor:pointer;}
 .badge-deuda{display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;background:#2b0d0a;color:#e74c3c;}
 .badge-ok{display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;background:#0d2b1a;color:#2ecc71;}
 .mes-bulk-btn{padding:4px 8px;border:1.5px solid var(--borde);border-radius:6px;background:white;font-size:11px;cursor:pointer;color:var(--texto2);}
@@ -1145,7 +1145,8 @@ function renderDetalle(filtrados) {
         <button onmousedown="verComp('${m.id}')" style="background:none;border:none;cursor:pointer;font-size:15px;">🧾</button>
         <button onmousedown="eliminarMov('${m.id}')" style="background:none;border:none;cursor:pointer;font-size:15px;">🗑️</button>
       </td>
-    </tr>`).join('')}</tbody></table>`;
+    </tr>`).join('')}</tbody></table>
+    <div style='padding:10px 0;font-size:12px;color:var(--texto2);'>${busq?sf.length+' de '+socios.length+' socios':socios.length+' socios en total'}</div>`;
 }
 function verComp(id){const m=movimientos.find(x=>x.id===id);if(m){ultimoComp=m;mostrarComprobante(m);showTab('comprobante');}}
 async function eliminarMov(id){
@@ -1234,8 +1235,10 @@ function renderGrafico() {
 function renderSocios() {
   const el=document.getElementById('socios-table'); if(!el) return;
   if(!socios.length){el.innerHTML='<p style="padding:24px;text-align:center;color:var(--texto2);">Sin socios. Importa desde Excel o agrega uno.</p>';return;}
+  const busq=(document.getElementById('socios-buscar')?.value||'').toLowerCase().trim();
+  const sf = busq ? socios.filter(s=>s.nombre.toLowerCase().includes(busq)||s.rut.toLowerCase().includes(busq)) : socios;
   el.innerHTML=`<table><thead><tr><th>N°</th><th>Nombre</th><th>RUT</th><th>Email</th><th>Estado</th><th></th></tr></thead>
-    <tbody>${socios.map((s,i)=>`<tr>
+    <tbody>${sf.map((s,i)=>`<tr>
       <td style="color:#aaa;font-size:11px;">${i+1}</td>
       <td style="font-weight:500;">${s.nombre}</td>
       <td>${s.rut}</td>
@@ -1586,7 +1589,10 @@ function renderCuotas(){
     MESES.forEach((m,i)=>{
       const fut=mesFuturo(anio,i);const est=getEstadoCelda(s.id,anio,i);
       const cls=claseEstado(est,fut);const ico=iconoEstado(est,fut);
-      const clk=fut?'':`onclick="toggleCelda('${s.id}','${anio}',${i})"`;
+      // Futuros: solo permitir pagado (no impago)
+  const clk=fut
+    ? (est===''?`onclick="setEstadoCeldaFuturo('${s.id}','${anio}',${i})"` : `onclick="toggleCeldaFuturo('${s.id}','${anio}',${i})"`)
+    : `onclick="toggleCelda('${s.id}','${anio}',${i})"`;
       html+=`<td><div class="celda-cuota ${cls}" ${clk} title="${MESES[i]}: ${est||'sin definir'}">${ico}</div></td>`;
     });
     const sinDatos=!tieneDatosSocio(s.id,anio);
@@ -1868,6 +1874,25 @@ async function confirmarMarcadoAnual() {
   toast(`${socio.nombre} — ${msgModo} → ${estadoLabel} ✓`, 'success');
 }
 
+
+// Meses futuros: solo se puede marcar como pagado, na o previo (no impago)
+async function setEstadoCeldaFuturo(sid,anio,idx){
+  // Ciclo para futuros: vacío → pagado → na → previo → vacío
+  const actual = getEstadoCelda(sid,anio,idx);
+  const cicloFut = {'':'pagado','pagado':'na','na':'previo','previo':''};
+  const nuevo = cicloFut[actual] ?? '';
+  if(!cuotasCache[sid]) cuotasCache[sid]={};
+  if(!cuotasCache[sid][anio]) cuotasCache[sid][anio]={};
+  const recId = cuotasCache[sid][anio][idx]?.recId;
+  if(nuevo==='') delete cuotasCache[sid][anio][idx];
+  else cuotasCache[sid][anio][idx] = {estado:nuevo, recId};
+  renderCuotas();
+  try { await setEstadoCelda(sid,anio,idx,nuevo); }
+  catch(e){ toast('Error guardando: '+e.message,'error'); }
+}
+async function toggleCeldaFuturo(sid,anio,idx){
+  return setEstadoCeldaFuturo(sid,anio,idx);
+}
 // ===== SPLASH =====
 window.addEventListener('load', () => {
   const splash = document.getElementById('jad-splash');
