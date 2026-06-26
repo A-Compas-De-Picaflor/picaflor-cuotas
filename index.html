@@ -1528,15 +1528,19 @@ function tieneDatosSocio(sid,anio){
   return Object.values(data).some(e=>e.estado&&e.estado!=='previo');
 }
 function iconoEstado(est,fut){
-  if(fut)return '<span style="color:#ddd;">—</span>';
-  if(est==='pagado')return '✅';if(est==='impago')return '❌';if(est==='na')return '⚪';
+  if(est==='pagado')return '✅';
+  if(est==='impago')return '❌';
+  if(est==='na')return '⚪';
   if(est==='previo')return '🔒';
+  if(fut)return '<span style="color:#555;">—</span>';
   return '<span style="color:#ddd;">·</span>';
 }
 function claseEstado(est,fut){
+  if(est==='pagado')return 'pagado';
+  if(est==='impago')return 'impago';
+  if(est==='na')return 'na';
+  if(est==='previo')return 'previo';
   if(fut)return 'futuro';
-  if(est==='pagado')return 'pagado';if(est==='impago')return 'impago';
-  if(est==='na')return 'na';if(est==='previo')return 'previo';
   return 'vacio';
 }
 function buildBulkNaBtns(){
