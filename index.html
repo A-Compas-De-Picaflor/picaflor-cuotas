@@ -1302,8 +1302,7 @@ async function agregarSocio() {
   const email=document.getElementById('ns-email').value.trim();
   if(!nombre||!rut){toast('Nombre y RUT obligatorios.','error');return;}
   try{
-    const rec=await atCreate('Socios',{nombre,rut,email});
-    await atUpdate('Socios',rec.id,{activo:true});
+    const rec=await atCreate('Socios',{nombre,rut,email,activo:'si'});
     socios.push({id:rec.id,nombre,rut,email,activo:true});
     socios.sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
     renderSocios();
