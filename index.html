@@ -1912,6 +1912,21 @@ async function setEstadoCeldaFuturo(sid,anio,idx){
 async function toggleCeldaFuturo(sid,anio,idx){
   return setEstadoCeldaFuturo(sid,anio,idx);
 }
+
+function detectCaps(e) {
+  const w = document.getElementById('caps-warn');
+  if(!w) return;
+  // Detectar Caps Lock: letra es mayúscula sin shift, o minúscula con shift
+  const char = e.key;
+  if(char && char.length === 1) {
+    const upper = char === char.toUpperCase() && char !== char.toLowerCase();
+    const withShift = e.shiftKey;
+    const capsOn = upper && !withShift || !upper && withShift;
+    w.style.display = capsOn ? 'block' : 'none';
+  } else if(e.getModifierState) {
+    w.style.display = e.getModifierState('CapsLock') ? 'block' : 'none';
+  }
+}
 // ===== SPLASH =====
 window.addEventListener('load', () => {
   const splash = document.getElementById('jad-splash');
