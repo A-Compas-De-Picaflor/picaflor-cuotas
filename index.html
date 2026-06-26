@@ -1020,7 +1020,7 @@ function filtrarSocios() {
     dd.innerHTML=`<div style="position:absolute;z-index:9999;background:var(--bg2);border:1.5px solid var(--borde);border-radius:8px;padding:10px 14px;width:100%;left:0;top:2px;font-size:13px;color:var(--texto);">${socios.length===0?'Sin socios cargados':'Sin resultados'}</div>`;
     return;
   }
-  dd.innerHTML=`<div style="position:absolute;z-index:9999;background:white;border:1.5px solid var(--azul);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.15);width:100%;left:0;top:2px;">
+  dd.innerHTML=`<div style="position:absolute;z-index:9999;background:var(--bg2);border:1.5px solid var(--accent);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.35);width:100%;left:0;top:2px;">
     ${matches.map(s=>`<div onmousedown="selSocio('${s.nombre.replace(/'/g,"\\'")}')" style="padding:9px 14px;cursor:pointer;font-size:14px;border-bottom:.5px solid var(--borde);" onmouseover="this.style.background='#f0f4f8'" onmouseout="this.style.background=''">${s.nombre} <span style="color:var(--texto2);font-size:12px;">${s.rut}</span></div>`).join('')}
   </div>`;
 }
