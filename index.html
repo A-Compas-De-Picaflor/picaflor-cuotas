@@ -1584,8 +1584,9 @@ function renderCuotas(){
   const el=document.getElementById('cuotas-table');if(!el)return;
   if(!socios.length){el.innerHTML='<p style="padding:24px;text-align:center;color:var(--texto2);">Sin socios. Agrega socios en la pestaña 👥 Socios.</p>';return;}
   let sf=socios.slice();
-  if(filtro==='deuda')sf=sf.filter(s=>calcDeudaSocio(s.id,anio)>0);
-  if(filtro==='aldia')sf=sf.filter(s=>calcDeudaSocio(s.id,anio)===0);
+  if(filtro==='deuda')      sf=sf.filter(s=>s.activo&&calcDeudaSocio(s.id,anio)>0);
+  else if(filtro==='aldia') sf=sf.filter(s=>s.activo&&calcDeudaSocio(s.id,anio)===0&&tieneDatosSocio(s.id,anio));
+  else if(filtro==='inactivos') sf=sf.filter(s=>!s.activo);
   // Filtro por nombre búsqueda
   if(cuotasFiltro) sf=sf.filter(s=>s.nombre.toLowerCase().includes(cuotasFiltro)||s.rut.toLowerCase().includes(cuotasFiltro));
   const f2=n=>n.toLocaleString('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0});
