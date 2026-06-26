@@ -370,6 +370,9 @@ tr:hover td{background:rgba(232,160,32,0.06);}
     <div id="tab-socios-content" style="display:none">
       <div class="card">
         <div class="card-title">👥 Listado de Socios</div>
+        <div style="margin-bottom:12px;">
+          <input type="text" id="socios-buscar" placeholder="🔍 Buscar por nombre o RUT..." oninput="renderSocios()" style="width:100%;padding:9px 14px;background:var(--bg3);border:1.5px solid var(--borde);border-radius:8px;color:var(--texto);font-size:13px;outline:none;"/>
+        </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:flex-end;">
           <div><label class="lbl">Importar desde Excel</label><input type="file" id="socios-file" accept=".xlsx,.xls" onchange="importarSocios()" style="font-size:13px;"/></div>
           <button class="btn-secondary btn-sm" onclick="descargarPlantillaSocios()">⬇ Plantilla</button>
@@ -404,6 +407,7 @@ tr:hover td{background:rgba(232,160,32,0.06);}
                 <option value="todos">Todos los socios</option>
                 <option value="deuda">Con deuda</option>
                 <option value="aldia">Al día</option>
+                <option value="inactivos">Inactivos</option>
               </select>
             </div>
             <button class="btn-secondary btn-sm" onclick="exportarCuotasExcel()">⬇ Excel</button>
@@ -1589,9 +1593,8 @@ function renderCuotas(){
     MESES.forEach((m,i)=>{
       const fut=mesFuturo(anio,i);const est=getEstadoCelda(s.id,anio,i);
       const cls=claseEstado(est,fut);const ico=iconoEstado(est,fut);
-      // Futuros: solo permitir pagado (no impago)
-  const clk=fut
-    ? (est===''?`onclick="setEstadoCeldaFuturo('${s.id}','${anio}',${i})"` : `onclick="toggleCeldaFuturo('${s.id}','${anio}',${i})"`)
+      const clk=fut
+    ? `onclick="setEstadoCeldaFuturo('${s.id}','${anio}',${i})"`
     : `onclick="toggleCelda('${s.id}','${anio}',${i})"`;
       html+=`<td><div class="celda-cuota ${cls}" ${clk} title="${MESES[i]}: ${est||'sin definir'}">${ico}</div></td>`;
     });
