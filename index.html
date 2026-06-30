@@ -1137,9 +1137,18 @@ function renderDetalle(filtrados) {
   const mes=document.getElementById('f-mes')?.value||'';
   const tipo=document.getElementById('f-tipo')?.value||'';
   const cta=document.getElementById('f-cuenta')?.value||'';
+  const busq=(document.getElementById('det-buscar')?.value||'').toLowerCase().trim();
   const f=filtrados||movimientos.filter(m=>{
     const fa=m.fecha||'';
-    return(!anio||fa.startsWith(anio))&&(!mes||fa.slice(5,7)===mes)&&(!tipo||m.tipo===tipo)&&(!cta||m.cuenta===cta);
+    if(!anio||fa.startsWith(anio)){}else return false;
+    if(!mes||fa.slice(5,7)===mes){}else return false;
+    if(!tipo||m.tipo===tipo){}else return false;
+    if(!cta||m.cuenta===cta){}else return false;
+    if(busq){
+      const txt=((m.cuenta||'')+' '+(m.glosa||'')+' '+(m.nombreSocio||'')+' '+(m.formapago||'')).toLowerCase();
+      if(!txt.includes(busq)) return false;
+    }
+    return true;
   });
   const ing=f.filter(m=>m.tipo==='Ingreso').reduce((s,m)=>s+m.valor,0);
   const egr=f.filter(m=>m.tipo==='Egreso').reduce((s,m)=>s+m.valor,0);
