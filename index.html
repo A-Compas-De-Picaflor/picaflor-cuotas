@@ -1146,7 +1146,7 @@ function renderDetalle(filtrados) {
     if(!tipo||m.tipo===tipo){}else return false;
     if(!cta||m.cuenta===cta){}else return false;
     if(busq){
-      const txt=((m.cuenta||'')+' '+(m.detalle||'')+' '+(m.obs||'')+' '+(m.nombreSocio||'')+' '+(m.formaPago||'')).toLowerCase();
+      const txt=((m.cuenta||'')+' '+(m.obs||'')+' '+(m.meses||'')+' '+(m.nombreSocio||'')+' '+(m.formaPago||'')).toLowerCase();
       if(!txt.includes(busq)) return false;
     }
     return true;
