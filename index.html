@@ -330,7 +330,7 @@ tr:hover td{background:rgba(232,160,32,0.06);}
           <div><label class="lbl">Año</label><select id="f-anio" onchange="renderDetalle()" style="width:auto;"></select></div>
           <div><label class="lbl">Mes</label><select id="f-mes" onchange="renderDetalle()" style="width:auto;"><option value="">Todos</option><option value="01">Enero</option><option value="02">Febrero</option><option value="03">Marzo</option><option value="04">Abril</option><option value="05">Mayo</option><option value="06">Junio</option><option value="07">Julio</option><option value="08">Agosto</option><option value="09">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option></select></div>
           <div><label class="lbl">Tipo</label><select id="f-tipo" onchange="renderDetalle()" style="width:auto;"><option value="">Todos</option><option>Ingreso</option><option>Egreso</option></select></div>
-          <div style="flex:1;min-width:200px;"><label class="lbl">Buscar</label><input type="text" id="det-buscar" placeholder="🔍 Concepto, socio, glosa..." oninput="renderDetalle()" style="width:100%;"/></div>
+          <div style="flex:1;min-width:200px;"><label class="lbl">Buscar</label><input type="text" id="det-buscar" placeholder="🔍 Concepto, socio, detalle..." oninput="renderDetalle()" style="width:100%;"/></div>
           <div><label class="lbl">Cuenta</label><select id="f-cuenta" onchange="renderDetalle()" style="width:auto;"></select></div>
           <button class="btn-secondary btn-sm" onclick="exportarExcel()">⬇ Excel</button>
         </div>
@@ -695,6 +695,7 @@ function normMov(r) {
     valor:      Number(f.valor || 0),
     formaPago:  f.formapago || f['forma de pago'] || f.formaPago || '',
     obs:        f.obs || '',
+    detalle:    f.detalle || f.glosa || f.obs || '',
     numero:     Number(f.numero || 0),
   };
 }
@@ -1145,7 +1146,7 @@ function renderDetalle(filtrados) {
     if(!tipo||m.tipo===tipo){}else return false;
     if(!cta||m.cuenta===cta){}else return false;
     if(busq){
-      const txt=((m.cuenta||'')+' '+(m.glosa||'')+' '+(m.nombreSocio||'')+' '+(m.formapago||'')).toLowerCase();
+      const txt=((m.cuenta||'')+' '+(m.detalle||'')+' '+(m.obs||'')+' '+(m.nombreSocio||'')+' '+(m.formaPago||'')).toLowerCase();
       if(!txt.includes(busq)) return false;
     }
     return true;
