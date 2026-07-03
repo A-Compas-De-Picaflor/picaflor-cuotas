@@ -127,6 +127,8 @@ tr:hover td{background:rgba(232,160,32,0.06);}
 .cuotas-table td.col-deuda{padding:6px 10px;text-align:right;font-weight:700;font-size:12px;white-space:nowrap;}
 .celda-cuota{width:52px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:all .12s;user-select:none;border-radius:4px;margin:2px;}
 .celda-cuota:hover{transform:scale(1.12);}
+.celda-cuota.ro{cursor:default;}
+.celda-cuota.ro:hover{transform:none;}
 .celda-cuota.pagado{background:#0d2b1a;color:#2ecc71;}
 .celda-cuota.impago{background:#2b0d0a;color:#e74c3c;}
 .celda-cuota.na{background:#1e2a42;color:#8891aa;}
@@ -207,7 +209,7 @@ tr:hover td{background:rgba(232,160,32,0.06);}
       <button class="login-btn" onclick="loginTesorero()">Ingresar</button>
     </div>
     <div id="login-directiva" style="display:none">
-      <input class="login-input" type="text" id="rut-input" placeholder="RUT (ej: 12.345.678-9)" onkeydown="if(event.key==='Enter')loginDirectiva()"/>
+      <input class="login-input" type="text" id="rut-input" placeholder="RUT (ej: 12345678-9)" onkeydown="if(event.key==='Enter')loginDirectiva()"/>
       <button class="login-btn" onclick="loginDirectiva()">Ingresar como Directiva</button>
     </div>
     <div id="login-consulta" style="display:none">
@@ -218,7 +220,7 @@ tr:hover td{background:rgba(232,160,32,0.06);}
       </div>
       <div id="login-paso2" style="display:none">
         <p style="font-size:12px;color:var(--texto2);margin-bottom:10px;">Hay más de un socio con esos dígitos. Ingresa tu <strong>RUT completo</strong>:</p>
-        <input class="login-input" type="text" id="rut-full-input" placeholder="RUT (ej: 12.345.678-9)" onkeydown="if(event.key==='Enter')loginSocioFull()"/>
+        <input class="login-input" type="text" id="rut-full-input" placeholder="RUT (ej: 12345678-9)" onkeydown="if(event.key==='Enter')loginSocioFull()"/>
         <button class="login-btn" onclick="loginSocioFull()">Ingresar</button>
         <button class="btn-secondary" style="width:100%;margin-top:8px;padding:8px;" onclick="document.getElementById('login-paso2').style.display='none';document.getElementById('login-paso1').style.display='block';">← Volver</button>
       </div>
@@ -382,7 +384,7 @@ tr:hover td{background:rgba(232,160,32,0.06);}
         <div id="form-nuevo-socio" style="display:none;background:var(--gris);border-radius:8px;padding:16px;margin-bottom:16px;">
           <div class="grid3">
             <div><label class="lbl">Nombre</label><input type="text" id="ns-nombre"/></div>
-            <div><label class="lbl">RUT</label><input type="text" id="ns-rut" placeholder="12.345.678-9"/></div>
+            <div><label class="lbl">RUT</label><input type="text" id="ns-rut" placeholder="12345678-9"/></div>
             <div><label class="lbl">Email</label><input type="email" id="ns-email"/></div>
           </div>
           <div style="margin-top:12px;display:flex;gap:8px;">
@@ -411,7 +413,7 @@ tr:hover td{background:rgba(232,160,32,0.06);}
                 <option value="inactivos">Inactivos</option>
               </select>
             </div>
-            <button class="btn-secondary btn-sm" onclick="exportarCuotasExcel()">⬇ Excel</button>
+            <button class="btn-secondary btn-sm" id="btn-cuotas-excel" onclick="exportarCuotasExcel()">⬇ Excel</button>
           </div>
         </div>
         <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;font-size:12px;align-items:center;">
@@ -419,7 +421,7 @@ tr:hover td{background:rgba(232,160,32,0.06);}
           <span><span style="display:inline-block;width:14px;height:14px;background:#fcebeb;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>❌ Impago</span>
           <span><span style="display:inline-block;width:14px;height:14px;background:#f0f0f4;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>⚪ No Aplica</span>
           <span><span style="display:inline-block;width:14px;height:14px;background:#1a1f2e;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>🔒 No Socio</span>
-          <span style="color:var(--texto2);font-style:italic;">Clic en celda para cambiar estado</span>
+          <span id="cuotas-hint-clic" style="color:var(--texto2);font-style:italic;">Clic en celda para cambiar estado</span>
         </div>
         <!-- Buscador por nombre -->
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
@@ -428,7 +430,7 @@ tr:hover td{background:rgba(232,160,32,0.06);}
               oninput="filtrarCuotas()" 
               style="width:100%;padding:8px 12px;background:var(--bg3);border:1.5px solid var(--borde);border-radius:8px;color:var(--texto);font-size:13px;outline:none;"/>
           </div>
-          <button class="btn-secondary btn-sm" onclick="abrirMarcadoAnual()" title="Marcar año completo a un socio">📅 Marcar año completo</button>
+          <button class="btn-secondary btn-sm" id="btn-marcado-anual" onclick="abrirMarcadoAnual()" title="Marcar año completo a un socio">📅 Marcar año completo</button>
         </div>
         <!-- Panel marcado anual -->
         <div id="panel-marcado-anual" style="display:none;background:var(--bg3);border:1.5px solid var(--accent);border-radius:10px;padding:16px;margin-bottom:14px;">
@@ -477,7 +479,7 @@ tr:hover td{background:rgba(232,160,32,0.06);}
             <button class="btn-primary btn-sm" onclick="confirmarMarcadoAnual()" style="margin-left:auto;">✔ Aplicar</button>
           </div>
         </div>
-        <div style="margin-bottom:12px;">
+        <div id="bulk-na-row" style="margin-bottom:12px;">
           <span style="font-size:12px;font-weight:600;color:var(--texto2);margin-right:6px;">Marcar mes NA para todos:</span>
           <div id="bulk-na-btns" style="display:inline-flex;flex-wrap:wrap;gap:4px;margin-top:4px;"></div>
         </div>
@@ -541,7 +543,7 @@ tr:hover td{background:rgba(232,160,32,0.06);}
           <p style="font-size:12px;color:var(--texto2);margin-bottom:12px;">Solo los RUTs ingresados aquí podrán acceder como Directiva. Deja vacío para permitir cualquier socio activo.</p>
           <div id="ruts-directiva-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;"></div>
           <div style="display:flex;gap:8px;">
-            <input type="text" id="nuevo-rut-dir" placeholder="RUT (ej: 12.345.678-9)" style="flex:1;"/>
+            <input type="text" id="nuevo-rut-dir" placeholder="RUT (ej: 12345678-9)" style="flex:1;"/>
             <button class="btn-primary btn-sm" onclick="agregarRutDirectiva()">+ Agregar</button>
           </div>
           <div style="margin-top:10px;display:flex;gap:8px;">
@@ -798,7 +800,7 @@ async function loginDirectiva() {
       await cargarDatos();
       document.getElementById('login-screen').style.display='none';
       document.getElementById('app').style.display='block';
-      ['tab-registro','tab-comprobante','tab-detalle','tab-grafico','tab-socios','tab-cuotas','tab-config'].forEach(id=>{
+      ['tab-registro','tab-comprobante','tab-detalle','tab-grafico','tab-socios','tab-config'].forEach(id=>{
         const el=document.getElementById(id);el.disabled=true;el.style.display='none';
       });
       document.getElementById('busq').disabled=true;
@@ -823,7 +825,7 @@ async function iniciarApp(nombre='') {
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='block';
   const soloRes = ROL==='directiva';
-  ['tab-registro','tab-comprobante','tab-detalle','tab-grafico','tab-socios','tab-cuotas','tab-config'].forEach(id=>{
+  ['tab-registro','tab-comprobante','tab-detalle','tab-grafico','tab-socios','tab-config'].forEach(id=>{
     const el = document.getElementById(id);
     el.disabled = soloRes;
     el.style.display = soloRes?'none':'';
@@ -1343,7 +1345,7 @@ async function eliminarSocio(id){
   catch(e){toast('Error: '+e.message,'error');}
 }
 function descargarPlantillaSocios(){
-  const ws=XLSX.utils.aoa_to_sheet([['nombre','rut','email'],['Juan Pérez','12.345.678-9','juan@correo.com']]);
+  const ws=XLSX.utils.aoa_to_sheet([['nombre','rut','email'],['Juan Pérez','12345678-9','juan@correo.com']]);
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Socios');XLSX.writeFile(wb,'plantilla_socios.xlsx');
 }
 async function importarSocios(){
@@ -1471,7 +1473,16 @@ function showTab(t){
   if(t==='detalle') renderDetalle();
   if(t==='resumen') renderResumen();
   if(t==='socios') renderSocios();
-  if(t==='cuotas'){if(!cuotasCargadas)cargarCuotasAirtable().then(()=>renderCuotas());else renderCuotas();buildBulkNaBtns();}
+  if(t==='cuotas'){
+    if(!cuotasCargadas)cargarCuotasAirtable().then(()=>renderCuotas());else renderCuotas();
+    buildBulkNaBtns();
+    // Modo solo lectura (Directiva): ocultar controles de edición y exportación
+    if(esSoloLectura()){
+      ['btn-cuotas-excel','cuotas-hint-clic','btn-marcado-anual','bulk-na-row','panel-marcado-anual'].forEach(id=>{
+        const el=document.getElementById(id);if(el)el.style.display='none';
+      });
+    }
+  }
   if(t==='config'){aplicarConfig();renderRutsDirectiva();cargarTokenUI();}
   if(t==='grafico'){actualizarAnios();setTimeout(renderGrafico,100);}
 }
@@ -1489,6 +1500,9 @@ function toast(msg,type='success'){
 
 // ===== CUOTAS =====
 const VALOR_CUOTA = 5000;
+
+// Solo el Tesorero puede modificar cuotas. Directiva = solo lectura.
+function esSoloLectura(){ return ROL !== 'tesorero'; }
 
 // Cache en memoria para evitar llamadas repetidas
 let cuotasCache = {}; // { socio_id: { anio: { mes: { estado, recId } } } }
@@ -1511,6 +1525,7 @@ function getEstadoCelda(sid, anio, idx) {
 }
 
 async function setEstadoCelda(sid, anio, idx, est) {
+  if(esSoloLectura()) return;
   const existing = cuotasCache[sid]?.[anio]?.[idx];
   if(!cuotasCache[sid]) cuotasCache[sid] = {};
   if(!cuotasCache[sid][anio]) cuotasCache[sid][anio] = {};
@@ -1571,6 +1586,7 @@ function buildBulkNaBtns(){
   c.innerHTML=MESES.map((m,i)=>`<button class="mes-bulk-btn" onclick="marcarMesNATodos(${i})">${m.slice(0,3)}</button>`).join('');
 }
 async function marcarMesNATodos(idx){
+  if(esSoloLectura()) return;
   const anio=document.getElementById('cuotas-anio')?.value||new Date().getFullYear().toString();
   if(!confirm(`Marcar ${MESES[idx]} ${anio} como NA para TODOS los socios?`))return;
   toast('Guardando...','info');
@@ -1581,6 +1597,7 @@ async function marcarMesNATodos(idx){
   toast(MESES[idx]+' marcado NA para todos ✓','success');
 }
 async function toggleCelda(sid,anio,idx){
+  if(esSoloLectura()) return;
   const nuevo = ciclarEstado(getEstadoCelda(sid,anio,idx));
   // Actualizar UI inmediatamente
   if(!cuotasCache[sid]) cuotasCache[sid]={};
@@ -1621,10 +1638,12 @@ function renderCuotas(){
     MESES.forEach((m,i)=>{
       const fut=mesFuturo(anio,i);const est=getEstadoCelda(s.id,anio,i);
       const cls=claseEstado(est,fut);const ico=iconoEstado(est,fut);
-      const clk=fut
-    ? `onclick="setEstadoCeldaFuturo('${s.id}','${anio}',${i})"`
-    : `onclick="toggleCelda('${s.id}','${anio}',${i})"`;
-      html+=`<td><div class="celda-cuota ${cls}" ${clk} title="${MESES[i]}: ${est||'sin definir'}">${ico}</div></td>`;
+      const clk=esSoloLectura()
+    ? ''
+    : (fut
+        ? `onclick="setEstadoCeldaFuturo('${s.id}','${anio}',${i})"`
+        : `onclick="toggleCelda('${s.id}','${anio}',${i})"`);
+      html+=`<td><div class="celda-cuota ${cls}${esSoloLectura()?' ro':''}" ${clk} title="${MESES[i]}: ${est||'sin definir'}">${ico}</div></td>`;
     });
     const sinDatos=!tieneDatosSocio(s.id,anio);
     let dh;
@@ -1641,6 +1660,7 @@ function renderCuotas(){
   if(res)res.innerHTML=`<div><span style="color:var(--texto2);">Con deuda:</span> <strong style="color:var(--rojo);">${conDeuda}</strong></div><div><span style="color:var(--texto2);">Al día:</span> <strong style="color:var(--verde);">${sfActivos.filter(s=>calcDeudaSocio(s.id,anio)===0&&tieneDatosSocio(s.id,anio)).length}</strong></div><div><span style="color:var(--texto2);">Inactivos:</span> <strong style="color:#888;">${sfInactivos.length}</strong></div><div><span style="color:var(--texto2);">Deuda total ${anio}:</span> <strong style="color:var(--rojo);font-size:15px;">${f2(totalDeuda)}</strong></div><div style="color:var(--texto2);font-size:11px;font-style:italic;">Cuota ${f2(VALOR_CUOTA)}/mes · Solo meses ❌ vencidos</div>`;
 }
 function exportarCuotasExcel(){
+  if(esSoloLectura()) return;
   const anio=document.getElementById('cuotas-anio')?.value||new Date().getFullYear().toString();
   const header=['Socio','RUT',...MESES,'Deuda Total'];
   const rows=socios.filter(s=>s.activo).map(s=>{
@@ -1878,6 +1898,7 @@ function toggleMarcadoDesde() {
 }
 
 async function confirmarMarcadoAnual() {
+  if(esSoloLectura()) return;
   const socioId  = document.getElementById('marcado-socio').value;
   const anio     = document.getElementById('marcado-anio').value;
   const estado   = document.getElementById('marcado-estado').value;
@@ -1908,6 +1929,7 @@ async function confirmarMarcadoAnual() {
 
 // Meses futuros: solo se puede marcar como pagado, na o previo (no impago)
 async function setEstadoCeldaFuturo(sid,anio,idx){
+  if(esSoloLectura()) return;
   // Ciclo para futuros: vacío → pagado → na → previo → vacío
   const actual = getEstadoCelda(sid,anio,idx);
   const cicloFut = {'':'pagado','pagado':'na','na':'previo','previo':''};
