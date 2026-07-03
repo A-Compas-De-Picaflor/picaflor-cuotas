@@ -483,6 +483,7 @@ tr:hover td{background:rgba(232,160,32,0.06);}
           <span style="font-size:12px;font-weight:600;color:var(--texto2);margin-right:6px;">Marcar mes NA para todos:</span>
           <div id="bulk-na-btns" style="display:inline-flex;flex-wrap:wrap;gap:4px;margin-top:4px;"></div>
         </div>
+        <div id="cuotas-dup-banner" style="display:none;gap:12px;align-items:center;background:#3a2a10;border:1.5px solid var(--accent);border-radius:10px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:var(--texto);"></div>
         <div class="cuotas-wrap"><div id="cuotas-table"></div></div>
         <div id="cuotas-resumen" style="margin-top:16px;padding:14px 18px;background:var(--gris);border-radius:8px;display:flex;gap:24px;flex-wrap:wrap;font-size:13px;"></div>
       </div>
@@ -1511,37 +1512,116 @@ let cuotasCargadas = false;
 async function cargarCuotasAirtable() {
   const recs = await proxyPost('get','Cuotas');
   cuotasCache = {};
+  duplicadosIds = [];
   recs.forEach(r => {
     const {socio_id, anio, mes, estado} = r.fields;
     if(!cuotasCache[socio_id]) cuotasCache[socio_id] = {};
     if(!cuotasCache[socio_id][anio]) cuotasCache[socio_id][anio] = {};
+    if(cuotasCache[socio_id][anio][mes]){
+      // Se conserva el registro más reciente (el que se carga después);
+      // el anterior queda marcado para eliminación.
+      duplicadosIds.push(cuotasCache[socio_id][anio][mes].recId);
+      console.warn('Cuota duplicada en Sheet:', {socio_id, anio, mes, ignorada: cuotasCache[socio_id][anio][mes], usada: {estado, recId: r.id}});
+    }
     cuotasCache[socio_id][anio][mes] = {estado: estado||'', recId: r.id};
   });
+  if(duplicadosIds.length > 0){
+    toast(`⚠ Hay ${duplicadosIds.length} registro(s) duplicado(s) en la hoja de Cuotas.`,'error');
+  }
   cuotasCargadas = true;
+  renderBannerDuplicados();
 }
 
 function getEstadoCelda(sid, anio, idx) {
   return cuotasCache[sid]?.[anio]?.[idx]?.estado || '';
 }
 
-async function setEstadoCelda(sid, anio, idx, est) {
-  if(esSoloLectura()) return;
-  const existing = cuotasCache[sid]?.[anio]?.[idx];
+// ===== LIMPIEZA DE DUPLICADOS =====
+let duplicadosIds = []; // recIds de registros duplicados antiguos (se conserva el más reciente)
+
+function renderBannerDuplicados(){
+  const b = document.getElementById('cuotas-dup-banner');
+  if(!b) return;
+  if(duplicadosIds.length > 0 && !esSoloLectura()){
+    b.style.display = 'flex';
+    b.innerHTML = `<div style="flex:1;">⚠ Se detectaron <strong>${duplicadosIds.length}</strong> registros duplicados en la hoja de Cuotas (residuos de guardados anteriores). Se está mostrando el estado más reciente de cada celda.</div>
+      <button class="btn-primary btn-sm" onclick="limpiarDuplicadosCuotas()" style="white-space:nowrap;">🧹 Eliminar duplicados</button>`;
+  } else {
+    b.style.display = 'none';
+    b.innerHTML = '';
+  }
+}
+
+async function limpiarDuplicadosCuotas(){
+  if(esSoloLectura() || !duplicadosIds.length) return;
+  if(!confirm(`Se eliminarán ${duplicadosIds.length} registros duplicados de la hoja de Cuotas, conservando el estado más reciente de cada celda (el que ves en pantalla).\n\nRecomendación: ten un respaldo de la hoja (Archivo → Hacer una copia en Google Sheets).\n\n¿Continuar?`)) return;
+  const ids = duplicadosIds.slice();
+  // Si los IDs son numéricos (posibles números de fila), borrar de mayor a menor
+  // para que la eliminación de una fila no desplace a las siguientes.
+  if(ids.every(id => /^\d+$/.test(String(id)))){
+    ids.sort((a,b)=>Number(b)-Number(a));
+  }
+  let ok = 0;
+  for(const id of ids){
+    try {
+      await proxyPost('delete','Cuotas',{id});
+      ok++;
+      if(ok % 5 === 0) toast(`Eliminando... ${ok}/${ids.length}`,'info');
+    } catch(e){
+      toast(`Error eliminando registro ${id}: ${e.message}. Deteniendo limpieza.`,'error');
+      break;
+    }
+  }
+  toast(`Limpieza terminada: ${ok}/${ids.length} eliminados. Recargando cuotas...`, ok===ids.length?'success':'error');
+  cuotasCargadas = false;
+  await cargarCuotasAirtable(); // recargar desde cero y verificar
+  renderCuotas();
+}
+
+// ===== COLA DE ESCRITURA =====
+// Todas las escrituras al Sheet se ejecutan UNA A LA VEZ, en orden.
+// Evita registros duplicados cuando se hacen clics rápidos o marcados masivos.
+let colaEscritura = Promise.resolve();
+function encolarEscritura(fn){
+  colaEscritura = colaEscritura.then(fn).catch(e=>toast('Error guardando: '+e.message,'error'));
+  return colaEscritura;
+}
+
+// Actualiza el cache local (UI instantánea) CONSERVANDO el recId existente.
+// Si el estado queda vacío pero hay registro remoto, se mantiene la entrada
+// con estado:'' hasta que el borrado remoto se complete.
+function setCacheCelda(sid, anio, idx, est){
   if(!cuotasCache[sid]) cuotasCache[sid] = {};
   if(!cuotasCache[sid][anio]) cuotasCache[sid][anio] = {};
+  const recId = cuotasCache[sid][anio][idx]?.recId;
+  if(est === '' && !recId){ delete cuotasCache[sid][anio][idx]; return; }
+  cuotasCache[sid][anio][idx] = {estado: est, recId};
+}
 
-  if(existing?.recId) {
-    if(est === '') {
-      await proxyPost('delete','Cuotas',{id: existing.recId});
-      delete cuotasCache[sid][anio][idx];
+// Persiste al Sheet el estado ACTUAL del cache para esa celda.
+// Se ejecuta dentro de la cola, así el recId siempre está al día.
+async function persistirCelda(sid, anio, idx){
+  const cel = cuotasCache[sid]?.[anio]?.[idx];
+  const est = cel?.estado || '';
+  const recId = cel?.recId;
+  if(recId){
+    if(est === ''){
+      await proxyPost('delete','Cuotas',{id: recId});
+      if(cuotasCache[sid]?.[anio]) delete cuotasCache[sid][anio][idx];
     } else {
-      await proxyPost('update','Cuotas',{id: existing.recId, fields:{estado: est}});
-      cuotasCache[sid][anio][idx] = {estado: est, recId: existing.recId};
+      await proxyPost('update','Cuotas',{id: recId, fields:{estado: est}});
     }
-  } else if(est !== '') {
+  } else if(est !== ''){
     const rec = await proxyPost('create','Cuotas',{fields:{socio_id: sid, anio: Number(anio), mes: Number(idx), estado: est}});
-    cuotasCache[sid][anio][idx] = {estado: est, recId: rec.id};
+    if(cuotasCache[sid]?.[anio]?.[idx]) cuotasCache[sid][anio][idx].recId = rec.id;
   }
+}
+
+// API única: actualiza UI al instante y encola el guardado.
+function setEstadoCelda(sid, anio, idx, est) {
+  if(esSoloLectura()) return Promise.resolve();
+  setCacheCelda(sid, anio, idx, est);
+  return encolarEscritura(()=>persistirCelda(sid, anio, idx));
 }
 
 function ciclarEstado(e){return({'':'impago','impago':'pagado','pagado':'na','na':'previo','previo':''})[e]??'';}
@@ -1562,8 +1642,10 @@ function calcDeudaSocio(sid,anio){
   return d;
 }
 function tieneDatosSocio(sid,anio){
+  // Solo cuenta como "con registro" si hay al menos un mes Pagado o Impago.
+  // Un año solo con NA / No Socio / vacíos muestra "Sin registro", no "Al día".
   const data=cuotasCache[sid]?.[anio]||{};
-  return Object.values(data).some(e=>e.estado&&e.estado!=='previo');
+  return Object.values(data).some(e=>e.estado==='pagado'||e.estado==='impago');
 }
 function iconoEstado(est,fut){
   if(est==='pagado')return '✅';
@@ -1591,32 +1673,27 @@ async function marcarMesNATodos(idx){
   if(!confirm(`Marcar ${MESES[idx]} ${anio} como NA para TODOS los socios?`))return;
   toast('Guardando...','info');
   for(const s of socios){
-    await setEstadoCelda(s.id,anio,idx,'na');
+    setEstadoCelda(s.id,anio,idx,'na'); // encola cada socio
   }
+  renderCuotas();
+  await colaEscritura; // esperar a que todos los guardados terminen
   renderCuotas();
   toast(MESES[idx]+' marcado NA para todos ✓','success');
 }
-async function toggleCelda(sid,anio,idx){
+function toggleCelda(sid,anio,idx){
   if(esSoloLectura()) return;
   const nuevo = ciclarEstado(getEstadoCelda(sid,anio,idx));
-  // Actualizar UI inmediatamente
-  if(!cuotasCache[sid]) cuotasCache[sid]={};
-  if(!cuotasCache[sid][anio]) cuotasCache[sid][anio]={};
-  const recId = cuotasCache[sid][anio][idx]?.recId;
-  if(nuevo==='') delete cuotasCache[sid][anio][idx];
-  else cuotasCache[sid][anio][idx] = {estado:nuevo, recId};
+  setEstadoCelda(sid,anio,idx,nuevo); // UI instantánea + guardado en cola
   renderCuotas();
-  // Guardar en Airtable en segundo plano
-  try { await setEstadoCelda(sid,anio,idx,nuevo); }
-  catch(e){ toast('Error guardando: '+e.message,'error'); }
 }
 async function marcarMesesPagados(sid,mesesStr,anio){
   if(!sid||!mesesStr)return;
   const meses=mesesStr.split(',').map(m=>m.trim());
   for(const m of meses){
     const i=MESES.indexOf(m);
-    if(i>=0) await setEstadoCelda(sid,anio,i,'pagado');
+    if(i>=0) setEstadoCelda(sid,anio,i,'pagado'); // encola cada mes
   }
+  await colaEscritura; // garantiza que ningún pago quede a medias
 }
 function renderCuotas(){
   const anio=document.getElementById('cuotas-anio')?.value||new Date().getFullYear().toString();
@@ -1919,8 +1996,10 @@ async function confirmarMarcadoAnual() {
   toast('Guardando...','info');
   const mesInicio = modo === 'desde' ? desdeMes : 0;
   for (let i = mesInicio; i < 12; i++) {
-    await setEstadoCelda(socioId, anio, String(i), estado);
+    setEstadoCelda(socioId, anio, String(i), estado); // encola cada mes
   }
+  renderCuotas(); // UI refleja el cambio de inmediato
+  await colaEscritura; // esperar a que TODOS los guardados terminen
   document.getElementById('panel-marcado-anual').style.display = 'none';
   renderCuotas();
   toast(`${socio.nombre} — ${msgModo} → ${estadoLabel} ✓`, 'success');
@@ -1928,22 +2007,16 @@ async function confirmarMarcadoAnual() {
 
 
 // Meses futuros: solo se puede marcar como pagado, na o previo (no impago)
-async function setEstadoCeldaFuturo(sid,anio,idx){
+function setEstadoCeldaFuturo(sid,anio,idx){
   if(esSoloLectura()) return;
   // Ciclo para futuros: vacío → pagado → na → previo → vacío
   const actual = getEstadoCelda(sid,anio,idx);
   const cicloFut = {'':'pagado','pagado':'na','na':'previo','previo':''};
   const nuevo = cicloFut[actual] ?? '';
-  if(!cuotasCache[sid]) cuotasCache[sid]={};
-  if(!cuotasCache[sid][anio]) cuotasCache[sid][anio]={};
-  const recId = cuotasCache[sid][anio][idx]?.recId;
-  if(nuevo==='') delete cuotasCache[sid][anio][idx];
-  else cuotasCache[sid][anio][idx] = {estado:nuevo, recId};
+  setEstadoCelda(sid,anio,idx,nuevo);
   renderCuotas();
-  try { await setEstadoCelda(sid,anio,idx,nuevo); }
-  catch(e){ toast('Error guardando: '+e.message,'error'); }
 }
-async function toggleCeldaFuturo(sid,anio,idx){
+function toggleCeldaFuturo(sid,anio,idx){
   return setEstadoCeldaFuturo(sid,anio,idx);
 }
 
