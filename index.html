@@ -1536,6 +1536,8 @@ function getEstadoCelda(sid, anio, idx) {
   return cuotasCache[sid]?.[anio]?.[idx]?.estado || '';
 }
 
+const pausa = ms => new Promise(r=>setTimeout(r,ms));
+
 // ===== LIMPIEZA DE DUPLICADOS =====
 let duplicadosIds = []; // recIds de registros duplicados antiguos (se conserva el más reciente)
 
@@ -1554,25 +1556,39 @@ function renderBannerDuplicados(){
 
 async function limpiarDuplicadosCuotas(){
   if(esSoloLectura() || !duplicadosIds.length) return;
-  if(!confirm(`Se eliminarán ${duplicadosIds.length} registros duplicados de la hoja de Cuotas, conservando el estado más reciente de cada celda (el que ves en pantalla).\n\nRecomendación: ten un respaldo de la hoja (Archivo → Hacer una copia en Google Sheets).\n\n¿Continuar?`)) return;
+  if(!confirm(`Se eliminarán ${duplicadosIds.length} registros duplicados de la hoja de Cuotas, conservando el estado más reciente de cada celda (el que ves en pantalla).\n\nRecomendación: ten un respaldo de la hoja (Archivo → Hacer una copia en Google Sheets).\n\nEl proceso puede tardar un par de minutos. No cierres la pestaña.\n\n¿Continuar?`)) return;
   const ids = duplicadosIds.slice();
   // Si los IDs son numéricos (posibles números de fila), borrar de mayor a menor
   // para que la eliminación de una fila no desplace a las siguientes.
   if(ids.every(id => /^\d+$/.test(String(id)))){
     ids.sort((a,b)=>Number(b)-Number(a));
   }
-  let ok = 0;
-  for(const id of ids){
-    try {
-      await proxyPost('delete','Cuotas',{id});
-      ok++;
-      if(ok % 5 === 0) toast(`Eliminando... ${ok}/${ids.length}`,'info');
-    } catch(e){
-      toast(`Error eliminando registro ${id}: ${e.message}. Deteniendo limpieza.`,'error');
-      break;
+  const btn = document.querySelector('#cuotas-dup-banner button');
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ Eliminando...'; }
+  let ok = 0, fallidos = [];
+  for(let n=0; n<ids.length; n++){
+    const id = ids[n];
+    let borrado = false;
+    // Hasta 3 intentos por registro, con espera creciente (Apps Script
+    // puede rechazar ráfagas de peticiones muy seguidas)
+    for(let intento=1; intento<=3 && !borrado; intento++){
+      try {
+        await proxyPost('delete','Cuotas',{id});
+        borrado = true;
+      } catch(e){
+        console.warn(`Intento ${intento}/3 falló para registro ${id}:`, e.message);
+        if(intento<3) await pausa(1000*intento);
+      }
     }
+    if(borrado) ok++; else { fallidos.push(id); console.error('No se pudo eliminar:', id); }
+    toast(`Eliminando duplicados... ${n+1}/${ids.length}`,'info');
+    await pausa(400); // respiro entre borrados para no saturar el proxy
   }
-  toast(`Limpieza terminada: ${ok}/${ids.length} eliminados. Recargando cuotas...`, ok===ids.length?'success':'error');
+  if(fallidos.length===0){
+    toast(`✓ Limpieza completa: ${ok}/${ids.length} duplicados eliminados. Recargando...`,'success');
+  } else {
+    toast(`Limpieza parcial: ${ok} eliminados, ${fallidos.length} fallaron (detalle en consola F12). Recargando...`,'error');
+  }
   cuotasCargadas = false;
   await cargarCuotasAirtable(); // recargar desde cero y verificar
   renderCuotas();
@@ -1583,8 +1599,24 @@ async function limpiarDuplicadosCuotas(){
 // Evita registros duplicados cuando se hacen clics rápidos o marcados masivos.
 let colaEscritura = Promise.resolve();
 function encolarEscritura(fn){
-  colaEscritura = colaEscritura.then(fn).catch(e=>toast('Error guardando: '+e.message,'error'));
+  // Pausa de 350ms tras cada operación: Apps Script rechaza o pisa
+  // escrituras que llegan en ráfaga (mismo problema visto en los borrados).
+  colaEscritura = colaEscritura.then(fn).then(()=>pausa(350)).catch(e=>toast('Error guardando: '+e.message+'. Recarga la página para verificar.','error'));
   return colaEscritura;
+}
+
+// proxyPost con hasta 3 intentos y espera creciente entre ellos
+async function proxyPostSeguro(action, tabla, extra={}){
+  let ultimoError;
+  for(let intento=1; intento<=3; intento++){
+    try { return await proxyPost(action, tabla, extra); }
+    catch(e){
+      ultimoError = e;
+      console.warn(`proxyPost ${action} intento ${intento}/3 falló:`, e.message);
+      if(intento<3) await pausa(1000*intento);
+    }
+  }
+  throw ultimoError;
 }
 
 // Actualiza el cache local (UI instantánea) CONSERVANDO el recId existente.
@@ -1606,13 +1638,13 @@ async function persistirCelda(sid, anio, idx){
   const recId = cel?.recId;
   if(recId){
     if(est === ''){
-      await proxyPost('delete','Cuotas',{id: recId});
+      await proxyPostSeguro('delete','Cuotas',{id: recId});
       if(cuotasCache[sid]?.[anio]) delete cuotasCache[sid][anio][idx];
     } else {
-      await proxyPost('update','Cuotas',{id: recId, fields:{estado: est}});
+      await proxyPostSeguro('update','Cuotas',{id: recId, fields:{estado: est}});
     }
   } else if(est !== ''){
-    const rec = await proxyPost('create','Cuotas',{fields:{socio_id: sid, anio: Number(anio), mes: Number(idx), estado: est}});
+    const rec = await proxyPostSeguro('create','Cuotas',{fields:{socio_id: sid, anio: Number(anio), mes: Number(idx), estado: est}});
     if(cuotasCache[sid]?.[anio]?.[idx]) cuotasCache[sid][anio][idx].recId = rec.id;
   }
 }
@@ -1993,10 +2025,12 @@ async function confirmarMarcadoAnual() {
 
   if (!confirm(`Marcar ${msgModo} como ${estadoLabel} para:\n${socio.nombre}\n\n¿Confirmas?`)) return;
 
-  toast('Guardando...','info');
+  toast('Guardando mes a mes, puede tardar unos segundos...','info');
   const mesInicio = modo === 'desde' ? desdeMes : 0;
   for (let i = mesInicio; i < 12; i++) {
+    const mesNombre = MESES_NOMBRES[i];
     setEstadoCelda(socioId, anio, String(i), estado); // encola cada mes
+    encolarEscritura(()=>{ toast(`Guardado ${mesNombre} ✓`,'info'); });
   }
   renderCuotas(); // UI refleja el cambio de inmediato
   await colaEscritura; // esperar a que TODOS los guardados terminen
