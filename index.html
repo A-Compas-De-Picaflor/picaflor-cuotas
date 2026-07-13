@@ -399,6 +399,7 @@ tr:hover td{background:rgba(232,160,32,0.06);}
             <div><label class="lbl">Ver</label>
               <select id="cuotas-filtro" onchange="renderCuotas()" style="width:auto;">
                 <option value="todos">Todos los socios</option>
+                <option value="activos">Activos</option>
                 <option value="deuda">Con deuda</option>
                 <option value="aldia">Al día</option>
                 <option value="inactivos">Inactivos</option>
@@ -1722,7 +1723,8 @@ function renderCuotas(){
   const el=document.getElementById('cuotas-table');if(!el)return;
   if(!socios.length){el.innerHTML='<p style="padding:24px;text-align:center;color:var(--texto2);">Sin socios. Agrega socios en la pestaña 👥 Socios.</p>';return;}
   let sf=socios.slice();
-  if(filtro==='deuda')      sf=sf.filter(s=>s.activo&&calcDeudaSocio(s.id,anio)>0);
+  if(filtro==='activos')    sf=sf.filter(s=>s.activo);
+  else if(filtro==='deuda')      sf=sf.filter(s=>s.activo&&calcDeudaSocio(s.id,anio)>0);
   else if(filtro==='aldia') sf=sf.filter(s=>s.activo&&calcDeudaSocio(s.id,anio)===0&&tieneDatosSocio(s.id,anio));
   else if(filtro==='inactivos') sf=sf.filter(s=>!s.activo);
   // Filtro por nombre búsqueda
@@ -1755,7 +1757,7 @@ function renderCuotas(){
   const sfActivos=sf.filter(s=>s.activo);
   const sfInactivos=sf.filter(s=>!s.activo);
   const res=document.getElementById('cuotas-resumen');
-  if(res)res.innerHTML=`<div><span style="color:var(--texto2);">Con deuda:</span> <strong style="color:var(--rojo);">${conDeuda}</strong></div><div><span style="color:var(--texto2);">Al día:</span> <strong style="color:var(--verde);">${sfActivos.filter(s=>calcDeudaSocio(s.id,anio)===0&&tieneDatosSocio(s.id,anio)).length}</strong></div><div><span style="color:var(--texto2);">Inactivos:</span> <strong style="color:#888;">${sfInactivos.length}</strong></div><div><span style="color:var(--texto2);">Deuda total ${anio}:</span> <strong style="color:var(--rojo);font-size:15px;">${f2(totalDeuda)}</strong></div><div style="color:var(--texto2);font-size:11px;font-style:italic;">Cuota ${f2(VALOR_CUOTA)}/mes · Solo meses ❌ vencidos</div>`;
+  if(res)res.innerHTML=`<div><span style="color:var(--texto2);">Activos:</span> <strong style="color:var(--accent,#e8a020);">${socios.filter(s=>s.activo).length}</strong></div><div><span style="color:var(--texto2);">Con deuda:</span> <strong style="color:var(--rojo);">${conDeuda}</strong></div><div><span style="color:var(--texto2);">Al día:</span> <strong style="color:var(--verde);">${sfActivos.filter(s=>calcDeudaSocio(s.id,anio)===0&&tieneDatosSocio(s.id,anio)).length}</strong></div><div><span style="color:var(--texto2);">Inactivos:</span> <strong style="color:#888;">${sfInactivos.length}</strong></div><div><span style="color:var(--texto2);">Deuda total ${anio}:</span> <strong style="color:var(--rojo);font-size:15px;">${f2(totalDeuda)}</strong></div><div style="color:var(--texto2);font-size:11px;font-style:italic;">Cuota ${f2(VALOR_CUOTA)}/mes · Solo meses ❌ vencidos</div>`;
 }
 function exportarCuotasExcel(){
   if(esSoloLectura()) return;
