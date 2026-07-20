@@ -395,7 +395,7 @@ tr:hover td{background:rgba(232,160,32,0.06);}
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
           <div class="card-title" style="margin-bottom:0;">💳 Estado de Cuotas</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
-            <div><label class="lbl">Año</label><select id="cuotas-anio" onchange="renderCuotas()" style="width:auto;"></select></div>
+            <div><label class="lbl">Año</label><select id="cuotas-anio" onchange="onCambioAnioCuotas()" style="width:auto;"></select></div>
             <div><label class="lbl">Ver</label>
               <select id="cuotas-filtro" onchange="renderCuotas()" style="width:auto;">
                 <option value="todos">Todos los socios</option>
@@ -943,7 +943,7 @@ function actualizarAnios() {
     const cur=sel.value;
     const extra = id==='f-anio'?'<option value="">Todos</option>':
                   id==='res-anio'?'<option value="todos">📊 Todos los años</option>':
-                  id==='cuotas-anio'?'':
+                  id==='cuotas-anio'?'<option value="__ALL__">📅 Todos los años</option>':
                   '<option value="todos">Todos</option>';
     sel.innerHTML = extra+anios.map(a=>`<option ${a===act?'selected':''}>${a}</option>`).join('');
     if(cur) sel.value=cur;
@@ -1663,6 +1663,23 @@ function calcDeudaSocio(sid,anio){
   }
   return d;
 }
+// Años con datos de cuotas en el sistema (más el año actual), de mayor a menor.
+function aniosCuotas(){
+  const set=new Set();
+  Object.values(cuotasCache).forEach(porAnio=>Object.keys(porAnio||{}).forEach(a=>set.add(a)));
+  const act=new Date().getFullYear().toString(); set.add(act);
+  return [...set].filter(Boolean).sort().reverse();
+}
+// Deuda histórica de un socio: suma de la deuda vencida de todos los años.
+function calcDeudaTotalSocio(sid){
+  return aniosCuotas().reduce((sum,a)=>sum+calcDeudaSocio(sid,a),0);
+}
+// Deuda de un socio desglosada por año (solo años con deuda > 0).
+function deudaPorAnioSocio(sid){
+  const r={};
+  aniosCuotas().forEach(a=>{const d=calcDeudaSocio(sid,a); if(d>0) r[a]=d;});
+  return r;
+}
 function tieneDatosSocio(sid,anio){
   // Solo cuenta como "con registro" si hay al menos un mes Pagado o Impago.
   // Un año solo con NA / No Socio / vacíos muestra "Sin registro", no "Al día".
@@ -1719,6 +1736,13 @@ async function marcarMesesPagados(sid,mesesStr,anio){
 }
 function renderCuotas(){
   const anio=document.getElementById('cuotas-anio')?.value||new Date().getFullYear().toString();
+  if(anio==='__ALL__'){ renderCuotasTodos(); return; }
+  // Vista de un año: si es el Tesorero, asegurar que los controles de edición estén visibles
+  if(!esSoloLectura()){
+    ['btn-marcado-anual','bulk-na-row','cuotas-hint-clic'].forEach(id=>{
+      const e=document.getElementById(id); if(e) e.style.display='';
+    });
+  }
   const filtro=document.getElementById('cuotas-filtro')?.value||'todos';
   const el=document.getElementById('cuotas-table');if(!el)return;
   if(!socios.length){el.innerHTML='<p style="padding:24px;text-align:center;color:var(--texto2);">Sin socios. Agrega socios en la pestaña 👥 Socios.</p>';return;}
@@ -1758,6 +1782,56 @@ function renderCuotas(){
   const sfInactivos=sf.filter(s=>!s.activo);
   const res=document.getElementById('cuotas-resumen');
   if(res)res.innerHTML=`<div><span style="color:var(--texto2);">Activos:</span> <strong style="color:var(--accent,#e8a020);">${socios.filter(s=>s.activo).length}</strong></div><div><span style="color:var(--texto2);">Con deuda:</span> <strong style="color:var(--rojo);">${conDeuda}</strong></div><div><span style="color:var(--texto2);">Al día:</span> <strong style="color:var(--verde);">${sfActivos.filter(s=>calcDeudaSocio(s.id,anio)===0&&tieneDatosSocio(s.id,anio)).length}</strong></div><div><span style="color:var(--texto2);">Inactivos:</span> <strong style="color:#888;">${sfInactivos.length}</strong></div><div><span style="color:var(--texto2);">Deuda total ${anio}:</span> <strong style="color:var(--rojo);font-size:15px;">${f2(totalDeuda)}</strong></div><div style="color:var(--texto2);font-size:11px;font-style:italic;">Cuota ${f2(VALOR_CUOTA)}/mes · Solo meses ❌ vencidos</div>`;
+}
+// Al cambiar el año en Cuotas: en la vista consolidada se ocultan los controles de edición.
+function onCambioAnioCuotas(){
+  const esTodos = (document.getElementById('cuotas-anio')?.value==='__ALL__');
+  ['btn-marcado-anual','bulk-na-row','panel-marcado-anual','cuotas-hint-clic'].forEach(id=>{
+    const e=document.getElementById(id); if(e) e.style.display = esTodos ? 'none' : '';
+  });
+  renderCuotas();
+}
+// Vista consolidada: deuda de todos los años por socio.
+function renderCuotasTodos(){
+  // Asegurar que los controles de edición estén ocultos en esta vista
+  ['btn-marcado-anual','bulk-na-row','panel-marcado-anual','cuotas-hint-clic'].forEach(id=>{
+    const e=document.getElementById(id); if(e) e.style.display='none';
+  });
+  const filtro=document.getElementById('cuotas-filtro')?.value||'todos';
+  const el=document.getElementById('cuotas-table');if(!el)return;
+  if(!socios.length){el.innerHTML='<p style="padding:24px;text-align:center;color:var(--texto2);">Sin socios. Agrega socios en la pestaña 👥 Socios.</p>';return;}
+  const anios=aniosCuotas(); // columnas, de más reciente a más antiguo
+  const f2=n=>n.toLocaleString('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0});
+  let sf=socios.slice();
+  if(filtro==='activos')        sf=sf.filter(s=>s.activo);
+  else if(filtro==='deuda')     sf=sf.filter(s=>s.activo&&calcDeudaTotalSocio(s.id)>0);
+  else if(filtro==='aldia')     sf=sf.filter(s=>s.activo&&calcDeudaTotalSocio(s.id)===0);
+  else if(filtro==='inactivos') sf=sf.filter(s=>!s.activo);
+  if(cuotasFiltro) sf=sf.filter(s=>s.nombre.toLowerCase().includes(cuotasFiltro)||s.rut.toLowerCase().includes(cuotasFiltro));
+  // Ordenar por deuda total descendente para que los morosos queden arriba
+  sf.sort((a,b)=>calcDeudaTotalSocio(b.id)-calcDeudaTotalSocio(a.id));
+  let html=`<table class="cuotas-table"><thead><tr><th class="col-nombre">Socio</th>${anios.map(a=>`<th style="text-align:right;min-width:74px;">${a}</th>`).join('')}<th style="min-width:96px;text-align:right;">Deuda total</th></tr></thead><tbody>`;
+  let totalGeneral=0,conDeuda=0;
+  const totalesAnio={}; anios.forEach(a=>totalesAnio[a]=0);
+  sf.forEach(s=>{
+    const dTotal=calcDeudaTotalSocio(s.id); totalGeneral+=dTotal; if(dTotal>0)conDeuda++;
+    const op=s.activo?"":"opacity:.55;";const tag=s.activo?"":" <span style=\"font-size:9px;color:#666;\">[Inactivo]</span>";
+    html+=`<tr><td class="col-nombre" style="${op}">${s.nombre}${tag}<br><span style="font-size:10px;color:var(--texto2);">${s.rut}</span></td>`;
+    anios.forEach(a=>{
+      const d=calcDeudaSocio(s.id,a); totalesAnio[a]+=d;
+      html+=`<td class="col-deuda">${d>0?`<span style="color:#e74c3c;font-weight:700;">${f2(d)}</span>`:'<span style="color:#3a4055;">—</span>'}</td>`;
+    });
+    let dh;
+    if(!s.activo&&dTotal===0) dh='<span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;background:#2a2020;color:#888;">Inactivo</span>';
+    else if(dTotal>0) dh=`<span class="badge-deuda">${f2(dTotal)}</span>`;
+    else dh='<span class="badge-ok">Al día</span>';
+    html+=`<td class="col-deuda">${dh}</td></tr>`;
+  });
+  // Fila de totales por año
+  html+=`<tr style="border-top:2px solid var(--borde);font-weight:700;"><td class="col-nombre" style="color:var(--texto2);">TOTALES</td>${anios.map(a=>`<td class="col-deuda" style="color:#e74c3c;">${totalesAnio[a]>0?f2(totalesAnio[a]):'—'}</td>`).join('')}<td class="col-deuda" style="color:#e74c3c;font-size:14px;">${f2(totalGeneral)}</td></tr>`;
+  html+='</tbody></table>';el.innerHTML=html;
+  const res=document.getElementById('cuotas-resumen');
+  if(res)res.innerHTML=`<div><span style="color:var(--texto2);">Vista:</span> <strong style="color:var(--accent,#e8a020);">📅 Todos los años (${anios[anios.length-1]}–${anios[0]})</strong></div><div><span style="color:var(--texto2);">Socios con deuda:</span> <strong style="color:var(--rojo);">${conDeuda}</strong></div><div><span style="color:var(--texto2);">Deuda histórica total:</span> <strong style="color:var(--rojo);font-size:15px;">${f2(totalGeneral)}</strong></div><div style="color:var(--texto2);font-size:11px;font-style:italic;">Suma de cuotas ❌ vencidas de todos los años · ordenado por mayor deuda</div>`;
 }
 function exportarCuotasExcel(){
   if(esSoloLectura()) return;
