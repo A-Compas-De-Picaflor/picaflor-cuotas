@@ -1508,6 +1508,9 @@ function toast(msg,type='success'){
 // los abonos con los ingresos registrados en Airtable (por monto y fecha aproximada).
 
 let cartolaActual = null;
+// Máxima diferencia de días permitida para conciliar un movimiento del banco con uno registrado.
+// (la fecha del banco y la de registro pueden diferir varios días)
+const MAX_DIAS_CONCIL = 10;
 let cartolaMovs = null;
 let cartolaInfo = null;
 
@@ -1615,16 +1618,122 @@ function diffDias(iso1, iso2){
   return Math.abs((new Date(iso1)-new Date(iso2))/86400000);
 }
 
-// Empareja un abono de la cartola con un ingreso de Airtable por monto y fecha aproximada (±4 días)
-function buscarIngreso(abono, isoFecha, usados){
-  let mejor=null, mejorDif=5;
+// Extrae el nombre del depositante desde la descripción de la cartola
+// (ej: "TRASPASO DE:Rossette Amanda Lanas Salas" -> "rossette amanda lanas salas")
+function nombreDepositante(desc){
+  if(!desc) return '';
+  let s = String(desc);
+  const i = s.indexOf(':');
+  if(i>=0) s = s.slice(i+1);
+  else s = s.replace(/traspaso de|transferencia de|dep[oó]sito de|abono|pago de/gi,'');
+  return normalizarNombre(s);
+}
+// Normaliza un texto para comparar nombres: minúsculas, sin tildes, sin puntuación
+function normalizarNombre(s){
+  return String(s||'')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')  // quitar tildes
+    .replace(/[^a-z0-9 ]/g,' ')
+    .replace(/\s+/g,' ').trim();
+}
+// ¿Coinciden dos nombres? Verdadero si comparten al menos 2 palabras significativas (>2 letras)
+function nombresCoinciden(a, b){
+  const pa = normalizarNombre(a).split(' ').filter(w=>w.length>2);
+  const pb = normalizarNombre(b).split(' ').filter(w=>w.length>2);
+  if(!pa.length || !pb.length) return false;
+  const comunes = pa.filter(w=>pb.includes(w));
+  return comunes.length >= 2;
+}
+// Busca en un movimiento un nombre para comparar: nombre del socio o el texto del detalle
+function textoIdentificaMov(m){
+  return (m.nombreSocio||'') + ' ' + (m.detalle||'');
+}
+
+// Empareja un CARGO (egreso) de la cartola con un egreso registrado, por monto y fecha aproximada.
+// El nombre/detalle sirve de apoyo cuando hay varios del mismo monto.
+function buscarEgreso(cargo, isoFecha, usados, nombreDep){
+  let mejor=null, mejorPuntaje=-1;
+  movimientos.forEach(m=>{
+    if(m.tipo!=='Egreso') return;
+    if(Number(m.valor)!==Number(cargo)) return;
+    if(usados.has(m.id)) return;
+    const dif = diffDias(isoFecha, m.fecha);
+    if(dif>=MAX_DIAS_CONCIL) return;
+    const calzaNombre = nombreDep && nombresCoinciden(nombreDep, textoIdentificaMov(m));
+    const puntaje = (calzaNombre?100:0) + (MAX_DIAS_CONCIL-dif);
+    if(puntaje>mejorPuntaje){ mejor=m; mejorPuntaje=puntaje; }
+  });
+  return mejor;
+}
+
+// Empareja un abono con UN ingreso de Airtable por monto exacto y fecha aproximada (±4 días).
+// Si hay varios candidatos del mismo monto, prefiere el que además calce por nombre (socio o detalle).
+function buscarIngreso(abono, isoFecha, usados, nombreDep){
+  let mejor=null, mejorPuntaje=-1;
   movimientos.forEach(m=>{
     if(m.tipo!=='Ingreso') return;
     if(Number(m.valor)!==Number(abono)) return;
     if(usados.has(m.id)) return;
     const dif = diffDias(isoFecha, m.fecha);
-    if(dif < mejorDif){ mejor=m; mejorDif=dif; }
+    if(dif>=MAX_DIAS_CONCIL) return;
+    // Puntaje: más alto si el nombre calza; a igualdad, menor diferencia de fecha
+    const calzaNombre = nombreDep && nombresCoinciden(nombreDep, textoIdentificaMov(m));
+    const puntaje = (calzaNombre?100:0) + (MAX_DIAS_CONCIL-dif);
+    if(puntaje>mejorPuntaje){ mejor=m; mejorPuntaje=puntaje; }
   });
+  return mejor;
+}
+
+// Empareja un abono con una COMBINACIÓN de ingresos del mismo depositante y fecha aproximada
+// que sumen el monto del abono (ej: un traspaso de 15.000 registrado como 5.000 + 10.000).
+// Agrupa por socio; si el ingreso no tiene socio, usa el texto del detalle como identificador.
+// Devuelve el arreglo de ingresos que lo componen, o null si no encuentra combinación.
+function buscarCombinacion(abono, isoFecha, usados, nombreDep){
+  const cand = movimientos.filter(m=>
+    m.tipo==='Ingreso' && !usados.has(m.id) &&
+    Number(m.valor)>0 && diffDias(isoFecha, m.fecha)<MAX_DIAS_CONCIL
+  );
+  // Agrupar por identificador del depositante (socio; si no hay, el detalle)
+  const grupos = {};
+  cand.forEach(m=>{
+    const k = normalizarNombre(m.nombreSocio || m.detalle || '∅') || '∅';
+    (grupos[k]=grupos[k]||[]).push(m);
+  });
+  // Primero intentar en el grupo cuyo nombre calza con el depositante de la cartola
+  const claves = Object.keys(grupos).sort((a,b)=>{
+    const ca = nombreDep && nombresCoinciden(nombreDep, a) ? 0 : 1;
+    const cb = nombreDep && nombresCoinciden(nombreDep, b) ? 0 : 1;
+    return ca-cb;
+  });
+  for(const k of claves){
+    const items = grupos[k];
+    if(items.length<2) continue;
+    const combo = subsetSuma(items, Number(abono));
+    if(combo) return combo;
+  }
+  return null;
+}
+
+// Busca un subconjunto de 'items' cuyos valores sumen 'objetivo'. Prioriza el de menos elementos.
+// Acotado para no explotar: si hay demasiados candidatos, limita el tamaño del subconjunto.
+function subsetSuma(items, objetivo){
+  const n = items.length;
+  const maxItems = n<=12 ? n : 6; // seguridad para no probar 2^n con listas grandes
+  let mejor=null;
+  // Probar combinaciones de tamaño creciente (2, 3, ... ) y quedarse con la primera que cuadre
+  function combinar(inicio, elegidos, suma){
+    if(suma===objetivo && elegidos.length>=2){
+      if(!mejor || elegidos.length<mejor.length) mejor=elegidos.slice();
+      return;
+    }
+    if(elegidos.length>=maxItems || suma>objetivo) return;
+    for(let i=inicio;i<n;i++){
+      elegidos.push(items[i]);
+      combinar(i+1, elegidos, suma+Number(items[i].valor));
+      elegidos.pop();
+    }
+  }
+  combinar(0, [], 0);
   return mejor;
 }
 
@@ -1638,30 +1747,72 @@ function renderCartola(parsed){
   // Conciliación con Airtable (solo abonos) — se calcula una vez y se guarda en cada movimiento
   const usados = new Set();
   let conciliados=0;
-  movs.forEach(m=>{
-    m._estado='';
-    if(m.abono){
-      const iso = fechaCartolaISO(m.fecha, info.emision);
-      const ing = buscarIngreso(m.abono, iso, usados);
-      if(ing){ usados.add(ing.id); conciliados++; m._estado='ok'; }
-      else { m._estado='falta'; }
-    }
+  // Conciliación por pasadas, de la coincidencia más específica a la más genérica, para que
+  // un abono suelto no consuma un ingreso que en realidad completa una combinación por nombre.
+  const abonos = movs.filter(m=>m.abono);
+  abonos.forEach(m=>{ m._estado=''; m._calzo=''; });
+  const isoDe = m=> fechaCartolaISO(m.fecha, info.emision);
+  const ndDe  = m=> nombreDepositante(m.desc);
+
+  const marcarOk = (m,ing)=>{ usados.add(ing.id); conciliados++; m._estado='ok'; m._calzo=ing.nombreSocio||ing.detalle||''; };
+  const marcarCombo = (m,combo)=>{ combo.forEach(x=>usados.add(x.id)); conciliados++; m._estado='combo'; m._comboN=combo.length; m._calzo=combo[0].nombreSocio||combo[0].detalle||''; };
+
+  // ¿Existe una combinación (>=2 ingresos) del mismo depositante que sume el abono?
+  const tieneCombo = m=> !!buscarCombinacion(m.abono, isoDe(m), usados, ndDe(m));
+  // ¿Existe un ingreso 1-a-1 que calce por nombre?
+  const tiene1aNombre = m=>{
+    const nd=ndDe(m), iso=isoDe(m); if(!nd) return false;
+    return movimientos.some(x=> x.tipo==='Ingreso' && !usados.has(x.id) && Number(x.valor)===Number(m.abono)
+      && diffDias(iso,x.fecha)<MAX_DIAS_CONCIL && nombresCoinciden(nd, textoIdentificaMov(x)));
+  };
+
+  // PASADA 1: combinaciones por nombre (las más específicas; reservan sus ingresos primero)
+  abonos.filter(m=>m._estado==='' && ndDe(m) && !tiene1aNombre(m) && tieneCombo(m)).forEach(m=>{
+    const combo = buscarCombinacion(m.abono, isoDe(m), usados, ndDe(m));
+    if(combo) marcarCombo(m, combo);
   });
+  // PASADA 2: coincidencia 1-a-1 que calza por nombre
+  abonos.filter(m=>m._estado==='' && tiene1aNombre(m)).forEach(m=>{
+    const ing = buscarIngreso(m.abono, isoDe(m), usados, ndDe(m));
+    if(ing) marcarOk(m, ing); else m._estado='';
+  });
+  // PASADA 3: resto — 1-a-1 por monto (sin nombre) y combinaciones genéricas
+  abonos.filter(m=>m._estado==='').forEach(m=>{
+    const iso=isoDe(m), nd=ndDe(m);
+    const ing = buscarIngreso(m.abono, iso, usados, nd);
+    if(ing){ marcarOk(m, ing); return; }
+    const combo = buscarCombinacion(m.abono, iso, usados, nd);
+    if(combo){ marcarCombo(m, combo); return; }
+    m._estado='falta';
+  });
+
+  // Conciliación de CARGOS (egresos) contra los egresos registrados, por monto y fecha aproximada.
+  const cargos = movs.filter(m=>m.cargo);
+  let egrConciliados=0;
+  cargos.forEach(m=>{ m._estado=''; m._calzo=''; });
+  cargos.forEach(m=>{
+    const iso=isoDe(m), nd=ndDe(m);
+    const eg = buscarEgreso(m.cargo, iso, usados, nd);
+    if(eg){ usados.add(eg.id); egrConciliados++; m._estado='ok'; m._calzo = eg.nombreSocio || eg.detalle || eg.obs || ''; }
+    else { m._estado='falta'; }
+  });
+  const nCargos = cargos.length;
+  const cargosFaltan = nCargos - egrConciliados;
 
   // Guardar en memoria para que el buscador pueda refiltrar sin reprocesar
   cartolaMovs = movs;
   cartolaInfo = info;
 
   const faltantes = nAbonos - conciliados;
-  const resumenConcil = nAbonos===0 ? '' :
-    `<div class="card" style="border-left:4px solid ${faltantes?'#e8a020':'var(--verde)'};">
+  const totalFaltan = faltantes + cargosFaltan;
+  const resumenConcil = (nAbonos===0 && nCargos===0) ? '' :
+    `<div class="card" style="border-left:4px solid ${totalFaltan?'#e8a020':'var(--verde)'};">
        <div class="card-title">&#128269; Conciliación con lo registrado</div>
        <div style="display:flex;gap:24px;flex-wrap:wrap;font-size:14px;">
-         <div><span style="color:var(--texto2);">Abonos en la cartola:</span> <strong>${nAbonos}</strong></div>
-         <div><span style="color:var(--texto2);">Ya registrados:</span> <strong style="color:var(--verde);">${conciliados}</strong></div>
-         <div><span style="color:var(--texto2);">Sin registrar:</span> <strong style="color:${faltantes?'#b5710e':'var(--verde)'};">${faltantes}</strong></div>
+         <div><span style="color:var(--texto2);">Abonos:</span> <strong>${nAbonos}</strong> · registrados <strong style="color:var(--verde);">${conciliados}</strong> · faltan <strong style="color:${faltantes?'#b5710e':'var(--verde)'};">${faltantes}</strong></div>
+         <div><span style="color:var(--texto2);">Cargos:</span> <strong>${nCargos}</strong> · registrados <strong style="color:var(--verde);">${egrConciliados}</strong> · faltan <strong style="color:${cargosFaltan?'#b5710e':'var(--verde)'};">${cargosFaltan}</strong></div>
        </div>
-       ${faltantes?`<p style="font-size:12px;color:var(--texto2);margin-top:10px;">Los abonos marcados <strong style="color:#b5710e;">Sin registrar</strong> aparecen en el banco pero no encontré un ingreso con el mismo monto y fecha cercana en el sistema. Revisa si corresponde registrarlos.</p>`:'<p style="font-size:12px;color:var(--verde);margin-top:10px;">Todos los abonos de la cartola están registrados.</p>'}
+       ${totalFaltan?`<p style="font-size:12px;color:var(--texto2);margin-top:10px;">Las filas marcadas <strong style="color:#f2b94e;">Sin registrar</strong> (abonos o cargos) aparecen en el banco pero no encontré un movimiento equivalente en el sistema en una fecha cercana. Revisa si corresponde registrarlas. Los abonos marcados <strong style="color:#7db6ff;">Registrado (varios)</strong> están cubiertos por dos o más ingresos que juntos suman el monto.</p>`:'<p style="font-size:12px;color:var(--verde);margin-top:10px;">Todos los movimientos de la cartola están registrados.</p>'}
      </div>`;
 
   document.getElementById('banco-resultado').innerHTML = `
@@ -1684,7 +1835,7 @@ function renderCartola(parsed){
     <div class="card">
       <div class="card-title">&#128203; Movimientos</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
-        <input type="text" id="banco-buscar" placeholder="Buscar por fecha (ej: 22/01), descripción o monto…" oninput="filtrarCartola()" style="flex:1;min-width:220px;"/>
+        <input type="text" id="banco-buscar" placeholder="Buscar por fecha (ej: 22/01), nombre, descripción o monto…" oninput="filtrarCartola()" style="flex:1;min-width:220px;"/>
         <select id="banco-filtro-estado" onchange="filtrarCartola()" style="width:auto;">
           <option value="">Todos</option>
           <option value="ok">Solo registrados</option>
@@ -1716,9 +1867,10 @@ function filtrarCartola(){
   const fe = document.getElementById('banco-filtro-estado')?.value||'';
   const badgeOk   = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:var(--verde-light);color:var(--verde);">&#10003; Registrado</span>';
   const badgeFalta= '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:rgba(232,160,32,0.22);color:#f2b94e;">&#9888; Sin registrar</span>';
+  const badgeCombo= '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:rgba(90,160,255,0.20);color:#7db6ff;" title="Registrado como varios ingresos que suman este abono">&#10003; Registrado (varios)</span>';
 
   const filtradas = cartolaMovs.filter(m=>{
-    if(fe==='ok'    && m._estado!=='ok')    return false;
+    if(fe==='ok'    && (m._estado!=='ok'&&m._estado!=='combo')) return false;
     if(fe==='falta' && m._estado!=='falta') return false;
     if(fe==='abono' && !m.abono)            return false;
     if(fe==='cargo' && !m.cargo)            return false;
@@ -1728,6 +1880,7 @@ function filtrarCartola(){
     return (m.fecha||'').toLowerCase().includes(q)
         || (m.desc||'').toLowerCase().includes(q)
         || (m.canal||'').toLowerCase().includes(q)
+        || (m._calzo||'').toLowerCase().includes(q)
         || (qNum!=='' && montos.includes(qNum));
   });
 
@@ -1738,11 +1891,12 @@ function filtrarCartola(){
   if(vacio) vacio.style.display='none';
 
   tbody.innerHTML = filtradas.map(m=>{
-    const badge = m._estado==='ok'?badgeOk : m._estado==='falta'?badgeFalta : '';
+    const badge = m._estado==='ok'?badgeOk : m._estado==='combo'?badgeCombo : m._estado==='falta'?badgeFalta : '';
     const bg = m._estado==='falta' ? 'background:rgba(232,160,32,0.13);' : '';
+    const calzoLinea = m._calzo ? `<br><span style="font-size:11px;color:#7db6ff;">&#8594; ${m._calzo}</span>` : '';
     return `<tr style="${bg}">
       <td style="white-space:nowrap;">${m.fecha}</td>
-      <td>${m.desc}${m.canal?`<br><span style="font-size:11px;color:var(--texto2);">${m.canal}</span>`:''}</td>
+      <td>${m.desc}${m.canal?`<br><span style="font-size:11px;color:var(--texto2);">${m.canal}</span>`:''}${calzoLinea}</td>
       <td style="text-align:right;color:var(--rojo);">${m.cargo?f2(m.cargo):''}</td>
       <td style="text-align:right;color:var(--verde);font-weight:600;">${m.abono?f2(m.abono):''}</td>
       <td style="text-align:right;">${m.saldo!=null?f2(m.saldo):''}</td>
