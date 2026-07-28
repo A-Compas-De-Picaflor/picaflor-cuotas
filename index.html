@@ -256,6 +256,7 @@ tr:hover td{background:rgba(232,160,32,0.06);}
     <button class="tab-btn" onclick="showTab('grafico')" id="tab-grafico">📈 Gráficos</button>
     <button class="tab-btn" onclick="showTab('socios')" id="tab-socios">👥 Socios</button>
     <button class="tab-btn" onclick="showTab('cuotas')" id="tab-cuotas">💳 Cuotas</button>
+    <button class="tab-btn" onclick="showTab('banco')" id="tab-banco">🏦 Banco</button>
     <button class="tab-btn" onclick="showTab('config')" id="tab-config">⚙️ Config</button>
   </div>
 
@@ -482,6 +483,19 @@ tr:hover td{background:rgba(232,160,32,0.06);}
     </div>
 
     <!-- CONFIG -->
+    <div id="tab-banco-content" style="display:none">
+      <div class="card">
+        <div class="card-title">🏦 Cartola Bancaria</div>
+        <p style="font-size:13px;color:var(--texto2);margin-bottom:14px;">Sube el Excel de la cartola de BancoEstado (.xls o .xlsx). Se mostrarán los movimientos y se compararán los abonos con los ingresos registrados.</p>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <label for="banco-file" class="btn-primary" style="cursor:pointer;display:inline-block;">📂 Elegir cartola…</label>
+          <input type="file" id="banco-file" accept=".xls,.xlsx" style="display:none;" onchange="cargarCartola(event)"/>
+          <span id="banco-filename" style="font-size:13px;color:var(--texto2);"></span>
+        </div>
+      </div>
+      <div id="banco-resultado"></div>
+    </div>
+
     <div id="tab-config-content" style="display:none">
       <div class="card">
         <div class="card-title">⚙️ Configuración</div>
@@ -793,7 +807,7 @@ async function loginDirectiva() {
       await cargarDatos();
       document.getElementById('login-screen').style.display='none';
       document.getElementById('app').style.display='block';
-      ['tab-registro','tab-comprobante','tab-detalle','tab-grafico','tab-socios','tab-config'].forEach(id=>{
+      ['tab-registro','tab-comprobante','tab-detalle','tab-grafico','tab-socios','tab-banco','tab-config'].forEach(id=>{
         const el=document.getElementById(id);el.disabled=true;el.style.display='none';
       });
       document.getElementById('busq').disabled=true;
@@ -818,7 +832,7 @@ async function iniciarApp(nombre='') {
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='block';
   const soloRes = ROL==='directiva';
-  ['tab-registro','tab-comprobante','tab-detalle','tab-grafico','tab-socios','tab-config'].forEach(id=>{
+  ['tab-registro','tab-comprobante','tab-detalle','tab-grafico','tab-socios','tab-banco','tab-config'].forEach(id=>{
     const el = document.getElementById(id);
     el.disabled = soloRes;
     el.style.display = soloRes?'none':'';
@@ -1457,7 +1471,7 @@ function busquedaGlobal(){
 
 // ===== TABS =====
 function showTab(t){
-  ['registro','comprobante','detalle','resumen','grafico','socios','cuotas','config'].forEach(id=>{
+  ['registro','comprobante','detalle','resumen','grafico','socios','cuotas','banco','config'].forEach(id=>{
     document.getElementById('tab-'+id+'-content').style.display=id===t?'block':'none';
     document.getElementById('tab-'+id).classList.toggle('active',id===t);
   });
@@ -1488,6 +1502,254 @@ function toast(msg,type='success'){
   setTimeout(()=>el.style.display='none',3500);
 }
 
+
+// ===== BANCO / CARTOLA =====
+// Lee el Excel de la cartola de BancoEstado, muestra sus datos y compara
+// los abonos con los ingresos registrados en Airtable (por monto y fecha aproximada).
+
+let cartolaActual = null;
+let cartolaMovs = null;
+let cartolaInfo = null;
+
+function cargarCartola(ev){
+  const file = ev.target.files[0];
+  if(!file) return;
+  document.getElementById('banco-filename').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    try{
+      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array', cellDates:false});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const filas = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+      const parsed = parseCartola(filas);
+      if(!parsed.movs.length){
+        toast('No se reconocieron movimientos en el archivo','error');
+        document.getElementById('banco-resultado').innerHTML =
+          '<div class="card"><p style="color:var(--rojo);">No se pudieron leer movimientos. Verifica que sea una cartola de BancoEstado en Excel.</p></div>';
+        return;
+      }
+      cartolaActual = parsed;
+      renderCartola(parsed);
+    }catch(err){
+      toast('Error al leer el archivo','error');
+      document.getElementById('banco-resultado').innerHTML =
+        '<div class="card"><p style="color:var(--rojo);">Error al leer el archivo: '+err.message+'</p></div>';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// Interpreta la estructura de la cartola de BancoEstado
+function parseCartola(filas){
+  const txt = (r,c)=>{ const v=filas[r]&&filas[r][c]; return v==null?'':String(v).trim(); };
+  const num = v=>{ if(v==null||v==='')return null; const n=Number(String(v).replace(/[^\d\-]/g,'')); return isNaN(n)?null:n; };
+  const info = {titular:'',rut:'',cuenta:'',moneda:'',emision:'',saldoInicial:null,saldoFinal:null};
+
+  // Buscar campos de cabecera por etiqueta (posición flexible)
+  for(let i=0;i<Math.min(filas.length,20);i++){
+    const fila = (filas[i]||[]).map(x=>x==null?'':String(x).trim());
+    fila.forEach((cel,j)=>{
+      const et = cel.toLowerCase().replace(':','');
+      if(et.startsWith('sr(a)')) info.titular = fila[j+1]||'';
+      if(et==='rut') info.rut = fila[j+1]||'';
+      if(et==='cuenta') info.cuenta = fila[j+1]||'';
+      if(et==='moneda') info.moneda = fila[j+1]||'';
+      if(cel.toLowerCase().includes('fecha de emisión')) info.emision = fila[j+1]||'';
+    });
+  }
+
+  // Localizar la fila de encabezado de movimientos (Fecha / Descripción / ... / Saldo)
+  let hdr = -1, cFecha=-1, cDesc=-1, cCanal=-1, cCargo=-1, cAbono=-1, cSaldo=-1;
+  for(let i=0;i<filas.length;i++){
+    const fila = (filas[i]||[]).map(x=>x==null?'':String(x).trim().toLowerCase());
+    const jf = fila.findIndex(x=>x==='fecha');
+    const jd = fila.findIndex(x=>x.startsWith('descrip'));
+    if(jf>=0 && jd>=0){
+      hdr=i; cFecha=jf; cDesc=jd;
+      cCanal = fila.findIndex(x=>x.includes('canal')||x.includes('sucursal'));
+      cCargo = fila.findIndex(x=>x.includes('cargo'));
+      cAbono = fila.findIndex(x=>x.includes('abono'));
+      cSaldo = fila.findIndex(x=>x.includes('saldo'));
+      break;
+    }
+  }
+
+  const movs = [];
+  if(hdr>=0){
+    for(let i=hdr+1;i<filas.length;i++){
+      const fecha = txt(i,cFecha);
+      const desc  = txt(i,cDesc);
+      if(!fecha && !desc) continue;
+      const descU = desc.toUpperCase();
+      if(descU.includes('SALDO INICIAL')){ info.saldoInicial = num(filas[i][cSaldo]); continue; }
+      if(descU.includes('SALDO FINAL'))  { info.saldoFinal   = num(filas[i][cSaldo]); continue; }
+      if(!/\d{1,2}\/\d{1,2}/.test(fecha)) continue; // fila que no es movimiento
+      movs.push({
+        fecha, desc,
+        canal: cCanal>=0?txt(i,cCanal):'',
+        cargo: cCargo>=0?num(filas[i][cCargo]):null,
+        abono: cAbono>=0?num(filas[i][cAbono]):null,
+        saldo: cSaldo>=0?num(filas[i][cSaldo]):null,
+      });
+    }
+  }
+  return {info, movs};
+}
+
+// Convierte "DD/MM" de la cartola a fecha ISO usando el año de emisión
+function fechaCartolaISO(ddmm, emision){
+  const m = ddmm.match(/(\d{1,2})\/(\d{1,2})/);
+  if(!m) return '';
+  let anio = new Date().getFullYear();
+  const me = (emision||'').match(/\/(\d{4})/) || (emision||'').match(/(\d{4})/);
+  if(me) anio = Number(me[1]);
+  const dia = m[1].padStart(2,'0'), mes = m[2].padStart(2,'0');
+  // Cartola a caballo de año: si el mes del movimiento es mayor al de emisión, es del año anterior
+  const mesEmision = (emision||'').match(/\/(\d{1,2})\//);
+  if(mesEmision && Number(mes) > Number(mesEmision[1])) anio -= 1;
+  return `${anio}-${mes}-${dia}`;
+}
+
+function diffDias(iso1, iso2){
+  if(!iso1||!iso2) return 999;
+  return Math.abs((new Date(iso1)-new Date(iso2))/86400000);
+}
+
+// Empareja un abono de la cartola con un ingreso de Airtable por monto y fecha aproximada (±4 días)
+function buscarIngreso(abono, isoFecha, usados){
+  let mejor=null, mejorDif=5;
+  movimientos.forEach(m=>{
+    if(m.tipo!=='Ingreso') return;
+    if(Number(m.valor)!==Number(abono)) return;
+    if(usados.has(m.id)) return;
+    const dif = diffDias(isoFecha, m.fecha);
+    if(dif < mejorDif){ mejor=m; mejorDif=dif; }
+  });
+  return mejor;
+}
+
+function renderCartola(parsed){
+  const {info, movs} = parsed;
+  const f2 = n=> n==null ? '—' : n.toLocaleString('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0});
+  const totAbonos = movs.reduce((s,m)=>s+(m.abono||0),0);
+  const totCargos = movs.reduce((s,m)=>s+(m.cargo||0),0);
+  const nAbonos = movs.filter(m=>m.abono).length;
+
+  // Conciliación con Airtable (solo abonos) — se calcula una vez y se guarda en cada movimiento
+  const usados = new Set();
+  let conciliados=0;
+  movs.forEach(m=>{
+    m._estado='';
+    if(m.abono){
+      const iso = fechaCartolaISO(m.fecha, info.emision);
+      const ing = buscarIngreso(m.abono, iso, usados);
+      if(ing){ usados.add(ing.id); conciliados++; m._estado='ok'; }
+      else { m._estado='falta'; }
+    }
+  });
+
+  // Guardar en memoria para que el buscador pueda refiltrar sin reprocesar
+  cartolaMovs = movs;
+  cartolaInfo = info;
+
+  const faltantes = nAbonos - conciliados;
+  const resumenConcil = nAbonos===0 ? '' :
+    `<div class="card" style="border-left:4px solid ${faltantes?'#e8a020':'var(--verde)'};">
+       <div class="card-title">&#128269; Conciliación con lo registrado</div>
+       <div style="display:flex;gap:24px;flex-wrap:wrap;font-size:14px;">
+         <div><span style="color:var(--texto2);">Abonos en la cartola:</span> <strong>${nAbonos}</strong></div>
+         <div><span style="color:var(--texto2);">Ya registrados:</span> <strong style="color:var(--verde);">${conciliados}</strong></div>
+         <div><span style="color:var(--texto2);">Sin registrar:</span> <strong style="color:${faltantes?'#b5710e':'var(--verde)'};">${faltantes}</strong></div>
+       </div>
+       ${faltantes?`<p style="font-size:12px;color:var(--texto2);margin-top:10px;">Los abonos marcados <strong style="color:#b5710e;">Sin registrar</strong> aparecen en el banco pero no encontré un ingreso con el mismo monto y fecha cercana en el sistema. Revisa si corresponde registrarlos.</p>`:'<p style="font-size:12px;color:var(--verde);margin-top:10px;">Todos los abonos de la cartola están registrados.</p>'}
+     </div>`;
+
+  document.getElementById('banco-resultado').innerHTML = `
+    <div class="card">
+      <div class="card-title">&#128196; Datos de la cartola</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;font-size:14px;">
+        ${info.titular?`<div><span style="color:var(--texto2);">Titular:</span> <strong>${info.titular}</strong></div>`:''}
+        ${info.cuenta?`<div><span style="color:var(--texto2);">Cuenta:</span> <strong>${info.cuenta}</strong></div>`:''}
+        ${info.emision?`<div><span style="color:var(--texto2);">Emisión:</span> <strong>${info.emision}</strong></div>`:''}
+        ${info.saldoInicial!=null?`<div><span style="color:var(--texto2);">Saldo inicial:</span> <strong>${f2(info.saldoInicial)}</strong></div>`:''}
+        ${info.saldoFinal!=null?`<div><span style="color:var(--texto2);">Saldo final:</span> <strong style="color:var(--accent);">${f2(info.saldoFinal)}</strong></div>`:''}
+      </div>
+      <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--borde);font-size:14px;">
+        <div><span style="color:var(--texto2);">Total abonos:</span> <strong style="color:var(--verde);">${f2(totAbonos)}</strong></div>
+        <div><span style="color:var(--texto2);">Total cargos:</span> <strong style="color:var(--rojo);">${f2(totCargos)}</strong></div>
+        <div><span style="color:var(--texto2);">Movimientos:</span> <strong>${movs.length}</strong></div>
+      </div>
+    </div>
+    ${resumenConcil}
+    <div class="card">
+      <div class="card-title">&#128203; Movimientos</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+        <input type="text" id="banco-buscar" placeholder="Buscar por fecha (ej: 22/01), descripción o monto…" oninput="filtrarCartola()" style="flex:1;min-width:220px;"/>
+        <select id="banco-filtro-estado" onchange="filtrarCartola()" style="width:auto;">
+          <option value="">Todos</option>
+          <option value="ok">Solo registrados</option>
+          <option value="falta">Solo sin registrar</option>
+          <option value="abono">Solo abonos</option>
+          <option value="cargo">Solo cargos</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="tabla" style="width:100%;font-size:13px;">
+          <thead><tr>
+            <th>Fecha</th><th>Descripción</th>
+            <th style="text-align:right;">Cargos</th><th style="text-align:right;">Abonos</th>
+            <th style="text-align:right;">Saldo</th><th style="text-align:center;">Estado</th>
+          </tr></thead>
+          <tbody id="banco-tbody"></tbody>
+        </table>
+      </div>
+      <div id="banco-tabla-vacia" style="display:none;padding:16px;text-align:center;color:var(--texto2);font-size:13px;">Sin movimientos que coincidan con la búsqueda.</div>
+    </div>`;
+  filtrarCartola();
+}
+
+// Filtra la tabla de movimientos de la cartola por texto (fecha/descripción/monto) y por estado
+function filtrarCartola(){
+  if(!cartolaMovs) return;
+  const f2 = n=> n==null ? '—' : n.toLocaleString('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0});
+  const q = (document.getElementById('banco-buscar')?.value||'').toLowerCase().trim();
+  const fe = document.getElementById('banco-filtro-estado')?.value||'';
+  const badgeOk   = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:var(--verde-light);color:var(--verde);">&#10003; Registrado</span>';
+  const badgeFalta= '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:#fff2e0;color:#b5710e;">&#9888; Sin registrar</span>';
+
+  const filtradas = cartolaMovs.filter(m=>{
+    if(fe==='ok'    && m._estado!=='ok')    return false;
+    if(fe==='falta' && m._estado!=='falta') return false;
+    if(fe==='abono' && !m.abono)            return false;
+    if(fe==='cargo' && !m.cargo)            return false;
+    if(!q) return true;
+    const qNum = q.replace(/[^\d]/g,'');
+    const montos = `${m.cargo||''} ${m.abono||''} ${m.saldo||''}`;
+    return (m.fecha||'').toLowerCase().includes(q)
+        || (m.desc||'').toLowerCase().includes(q)
+        || (m.canal||'').toLowerCase().includes(q)
+        || (qNum!=='' && montos.includes(qNum));
+  });
+
+  const tbody = document.getElementById('banco-tbody');
+  const vacio = document.getElementById('banco-tabla-vacia');
+  if(!tbody) return;
+  if(!filtradas.length){ tbody.innerHTML=''; if(vacio)vacio.style.display='block'; return; }
+  if(vacio) vacio.style.display='none';
+
+  tbody.innerHTML = filtradas.map(m=>{
+    const badge = m._estado==='ok'?badgeOk : m._estado==='falta'?badgeFalta : '';
+    const bg = m._estado==='falta' ? 'background:#fffaf2;' : '';
+    return `<tr style="${bg}">
+      <td style="white-space:nowrap;">${m.fecha}</td>
+      <td>${m.desc}${m.canal?`<br><span style="font-size:11px;color:var(--texto2);">${m.canal}</span>`:''}</td>
+      <td style="text-align:right;color:var(--rojo);">${m.cargo?f2(m.cargo):''}</td>
+      <td style="text-align:right;color:var(--verde);font-weight:600;">${m.abono?f2(m.abono):''}</td>
+      <td style="text-align:right;">${m.saldo!=null?f2(m.saldo):''}</td>
+      <td style="text-align:center;">${badge}</td>
+    </tr>`;
+  }).join('');
+}
 
 // ===== CUOTAS =====
 const VALOR_CUOTA = 5000;
