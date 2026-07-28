@@ -1715,7 +1715,7 @@ function filtrarCartola(){
   const q = (document.getElementById('banco-buscar')?.value||'').toLowerCase().trim();
   const fe = document.getElementById('banco-filtro-estado')?.value||'';
   const badgeOk   = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:var(--verde-light);color:var(--verde);">&#10003; Registrado</span>';
-  const badgeFalta= '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:#fff2e0;color:#b5710e;">&#9888; Sin registrar</span>';
+  const badgeFalta= '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:rgba(232,160,32,0.22);color:#f2b94e;">&#9888; Sin registrar</span>';
 
   const filtradas = cartolaMovs.filter(m=>{
     if(fe==='ok'    && m._estado!=='ok')    return false;
@@ -1739,7 +1739,7 @@ function filtrarCartola(){
 
   tbody.innerHTML = filtradas.map(m=>{
     const badge = m._estado==='ok'?badgeOk : m._estado==='falta'?badgeFalta : '';
-    const bg = m._estado==='falta' ? 'background:#fffaf2;' : '';
+    const bg = m._estado==='falta' ? 'background:rgba(232,160,32,0.13);' : '';
     return `<tr style="${bg}">
       <td style="white-space:nowrap;">${m.fecha}</td>
       <td>${m.desc}${m.canal?`<br><span style="font-size:11px;color:var(--texto2);">${m.canal}</span>`:''}</td>
