@@ -252,6 +252,8 @@ tr:hover td{background:rgba(232,160,32,0.06);}
     <button class="tab-btn active" onclick="showTab('registro')" id="tab-registro">✏️ Registrar</button>
     <button class="tab-btn" onclick="showTab('comprobante')" id="tab-comprobante">🧾 Comprobante</button>
     <button class="tab-btn" onclick="showTab('detalle')" id="tab-detalle">📋 Detalle</button>
+    <button class="tab-btn" onclick="abrirDetalleBanco('Banco de Chile')" id="tab-detchile">🔵 Detalle Chile</button>
+    <button class="tab-btn" onclick="abrirDetalleBanco('Banco Estado')" id="tab-detestado">🟡 Detalle Estado</button>
     <button class="tab-btn" onclick="showTab('resumen')" id="tab-resumen">📊 Resumen</button>
     <button class="tab-btn" onclick="showTab('grafico')" id="tab-grafico">📈 Gráficos</button>
     <button class="tab-btn" onclick="showTab('socios')" id="tab-socios">👥 Socios</button>
@@ -327,6 +329,7 @@ tr:hover td{background:rgba(232,160,32,0.06);}
           <div><label class="lbl">Tipo</label><select id="f-tipo" onchange="renderDetalle()" style="width:auto;"><option value="">Todos</option><option>Ingreso</option><option>Egreso</option></select></div>
           <div style="flex:1;min-width:200px;"><label class="lbl">Buscar</label><input type="text" id="det-buscar" placeholder="🔍 Concepto, socio, detalle..." oninput="renderDetalle()" style="width:100%;"/></div>
           <div><label class="lbl">Cuenta</label><select id="f-cuenta" onchange="renderDetalle()" style="width:auto;"></select></div>
+          <div><label class="lbl">Banco</label><select id="f-banco" onchange="renderDetalle()" style="width:auto;"><option value="">Todos</option><option>Banco de Chile</option><option>Banco Estado</option><option value="__SIN__">Efectivo / sin banco</option></select></div>
           <button class="btn-secondary btn-sm" onclick="exportarExcel()">⬇ Excel</button>
         </div>
         <div id="det-table" style="overflow-x:auto;"></div>
@@ -809,7 +812,7 @@ async function loginDirectiva() {
       await cargarDatos();
       document.getElementById('login-screen').style.display='none';
       document.getElementById('app').style.display='block';
-      ['tab-registro','tab-comprobante','tab-detalle','tab-grafico','tab-socios','tab-banco','tab-config'].forEach(id=>{
+      ['tab-registro','tab-comprobante','tab-detalle','tab-detchile','tab-detestado','tab-grafico','tab-socios','tab-banco','tab-config'].forEach(id=>{
         const el=document.getElementById(id);el.disabled=true;el.style.display='none';
       });
       document.getElementById('busq').disabled=true;
@@ -834,7 +837,7 @@ async function iniciarApp(nombre='') {
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='block';
   const soloRes = ROL==='directiva';
-  ['tab-registro','tab-comprobante','tab-detalle','tab-grafico','tab-socios','tab-banco','tab-config'].forEach(id=>{
+  ['tab-registro','tab-comprobante','tab-detalle','tab-detchile','tab-detestado','tab-grafico','tab-socios','tab-banco','tab-config'].forEach(id=>{
     const el = document.getElementById(id);
     el.disabled = soloRes;
     el.style.display = soloRes?'none':'';
@@ -1143,11 +1146,24 @@ function printComprobante() {
 }
 
 // ===== DETALLE =====
+// Abre la pestaña Detalle preseleccionando un banco, y resalta el acceso correspondiente
+function abrirDetalleBanco(banco){
+  showTab('detalle');
+  const sel=document.getElementById('f-banco');
+  if(sel){ sel.value=banco; }
+  // resaltar el botón de acceso que corresponde
+  document.getElementById('tab-detalle').classList.remove('active');
+  const id = banco==='Banco de Chile' ? 'tab-detchile' : 'tab-detestado';
+  const btn=document.getElementById(id); if(btn) btn.classList.add('active');
+  renderDetalle();
+}
+
 function renderDetalle(filtrados) {
   const anio=document.getElementById('f-anio')?.value||'';
   const mes=document.getElementById('f-mes')?.value||'';
   const tipo=document.getElementById('f-tipo')?.value||'';
   const cta=document.getElementById('f-cuenta')?.value||'';
+  const banco=document.getElementById('f-banco')?.value||'';
   const busq=(document.getElementById('det-buscar')?.value||'').toLowerCase().trim();
   const f=filtrados||movimientos.filter(m=>{
     const fa=m.fecha||'';
@@ -1155,6 +1171,8 @@ function renderDetalle(filtrados) {
     if(!mes||fa.slice(5,7)===mes){}else return false;
     if(!tipo||m.tipo===tipo){}else return false;
     if(!cta||m.cuenta===cta){}else return false;
+    if(banco==='__SIN__'){ if((m.banco||'')!=='') return false; }
+    else if(banco){ if((m.banco||'')!==banco) return false; }
     if(busq){
       const txt=((m.cuenta||'')+' '+(m.obs||'')+' '+(m.meses||'')+' '+(m.nombreSocio||'')+' '+(m.formaPago||'')).toLowerCase();
       if(!txt.includes(busq)) return false;
@@ -1163,8 +1181,9 @@ function renderDetalle(filtrados) {
   });
   const ing=f.filter(m=>m.tipo==='Ingreso').reduce((s,m)=>s+m.valor,0);
   const egr=f.filter(m=>m.tipo==='Egreso').reduce((s,m)=>s+m.valor,0);
+  const etiqueta = banco==='__SIN__' ? ' (Efectivo)' : (banco?` (${banco})`:'');
   document.getElementById('det-stats').innerHTML=[
-    ['Total Ingresos',ing,'var(--verde)'],['Total Egresos',egr,'var(--rojo)'],['Saldo',ing-egr,ing-egr>=0?'var(--azul)':'var(--rojo)']
+    ['Total Ingresos'+etiqueta,ing,'var(--verde)'],['Total Egresos'+etiqueta,egr,'var(--rojo)'],['Saldo'+etiqueta,ing-egr,ing-egr>=0?'var(--azul)':'var(--rojo)']
   ].map(([l,v,c])=>`<div class="stat"><div class="stat-label">${l}</div><div class="stat-val" style="color:${c};">${fmt(v)}</div></div>`).join('');
   if(!f.length){document.getElementById('det-table').innerHTML='<p style="text-align:center;padding:30px;color:var(--texto2);">Sin movimientos.</p>';return;}
   document.getElementById('det-table').innerHTML=`<table>
@@ -1202,10 +1221,25 @@ function renderResumen() {
   const ingAll=movimientos.filter(m=>m.tipo==='Ingreso').reduce((s,m)=>s+m.valor,0);
   const egrAll=movimientos.filter(m=>m.tipo==='Egreso').reduce((s,m)=>s+m.valor,0);
   const saldoReal=ini+ingAll-egrAll;
+  // Saldo por banco: ingresos menos egresos de los movimientos de cada banco (todos los períodos)
+  const saldoBanco = (bk)=>{
+    const ing = movimientos.filter(m=>m.tipo==='Ingreso' && (m.banco||'')===bk).reduce((s,m)=>s+m.valor,0);
+    const egr = movimientos.filter(m=>m.tipo==='Egreso'  && (m.banco||'')===bk).reduce((s,m)=>s+m.valor,0);
+    return {ing, egr, saldo:ing-egr};
+  };
+  const bChile = saldoBanco('Banco de Chile');
+  const bEstado= saldoBanco('Banco Estado');
+  const bSin   = saldoBanco(''); // efectivo o sin banco asignado
   const banner=document.getElementById('saldo-real-banner');
   if(banner) {
     banner.style.display='block';
-    banner.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    const tarjetaBanco = (nombre, d, color, icono)=>`
+      <div style="background:rgba(255,255,255,0.06);border-radius:10px;padding:10px 14px;min-width:150px;border-left:3px solid ${color};">
+        <div style="font-size:11px;opacity:.8;margin-bottom:3px;">${icono} ${nombre}</div>
+        <div style="font-size:18px;font-weight:700;">${fmt(d.saldo)}</div>
+        <div style="font-size:10px;opacity:.6;margin-top:2px;">+${fmt(d.ing)} · −${fmt(d.egr)}</div>
+      </div>`;
+    banner.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;">
       <div><div style="font-size:12px;font-weight:600;text-transform:uppercase;opacity:.8;margin-bottom:4px;">💰 Saldo Real del Club (todos los períodos)</div>
         <div style="font-size:28px;font-weight:700;">${fmt(saldoReal)}</div></div>
       <div style="display:flex;gap:20px;font-size:13px;">
@@ -1213,6 +1247,11 @@ function renderResumen() {
         <div><div style="opacity:.75;margin-bottom:2px;">Egresos Históricos</div><div style="font-weight:600;color:#f5c4b3;">${fmt(egrAll)}</div></div>
       </div>
       ${anio!=='todos'?`<div style="font-size:11px;opacity:.65;font-style:italic;">⚠️ La tabla muestra solo el año ${anio}</div>`:''}
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;padding-top:12px;border-top:1px solid rgba(255,255,255,0.12);">
+      ${tarjetaBanco('Banco de Chile', bChile, '#3b6fd4', '🏦')}
+      ${tarjetaBanco('Banco Estado', bEstado, '#e8a020', '🏦')}
+      ${tarjetaBanco('Efectivo / sin banco', bSin, '#7a869a', '💵')}
     </div>`;
   }
   const ing=f.filter(m=>m.tipo==='Ingreso').reduce((s,m)=>s+m.valor,0);
@@ -1480,6 +1519,9 @@ function showTab(t){
     document.getElementById('tab-'+id+'-content').style.display=id===t?'block':'none';
     document.getElementById('tab-'+id).classList.toggle('active',id===t);
   });
+  // Los accesos "Detalle Chile/Estado" comparten el contenido de Detalle; quitar su resaltado salvo que se activen desde abrirDetalleBanco
+  const tc=document.getElementById('tab-detchile'), te=document.getElementById('tab-detestado');
+  if(tc&&te){ tc.classList.remove('active'); te.classList.remove('active'); }
   if(t==='detalle') renderDetalle();
   if(t==='resumen') renderResumen();
   if(t==='socios') renderSocios();
