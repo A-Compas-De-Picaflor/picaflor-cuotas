@@ -1042,6 +1042,25 @@ function selSocio(nombre) {
   document.getElementById('socio-dd').innerHTML='';
 }
 
+// Autocompletado de socios para el modal de edición (misma nómina que el registro)
+function filtrarSociosEd() {
+  const inp=document.getElementById('ed-socio'); const dd=document.getElementById('ed-socio-dd');
+  if(!inp||!dd) return;
+  const q=inp.value.toLowerCase();
+  const matches=q.length>=1?socios.filter(s=>s.nombre.toLowerCase().includes(q)).slice(0,8):socios.slice(0,8);
+  if(!matches.length) {
+    dd.innerHTML=`<div style="position:absolute;z-index:99999;background:var(--bg2);border:1.5px solid var(--borde);border-radius:8px;padding:10px 14px;width:100%;left:0;top:2px;font-size:13px;color:var(--texto);">${socios.length===0?'Sin socios cargados':'Sin resultados'}</div>`;
+    return;
+  }
+  dd.innerHTML=`<div style="position:absolute;z-index:99999;background:var(--bg2);border:1.5px solid var(--accent);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.35);width:100%;left:0;top:2px;max-height:240px;overflow-y:auto;">
+    ${matches.map(s=>`<div onmousedown="selSocioEd('${s.nombre.replace(/'/g,"\\'")}')" style="padding:9px 14px;cursor:pointer;font-size:14px;border-bottom:.5px solid var(--borde);" onmouseover="this.style.background='#f0f4f8'" onmouseout="this.style.background=''">${s.nombre} <span style="color:var(--texto2);font-size:12px;">${s.rut}</span></div>`).join('')}
+  </div>`;
+}
+function selSocioEd(nombre) {
+  document.getElementById('ed-socio').value=nombre;
+  document.getElementById('ed-socio-dd').innerHTML='';
+}
+
 // ===== GUARDAR MOVIMIENTO =====
 async function guardarMovimiento() {
   const fecha=document.getElementById('r-fecha').value;
@@ -2622,7 +2641,7 @@ function editarDetalle(id) {
             <option ${tipo==='Ingreso'?'selected':''}>Ingreso</option>
             <option ${tipo==='Egreso'?'selected':''}>Egreso</option>
           </select></div>
-        <div style="grid-column:1/3;"><label class="lbl">Socio / Responsable</label><input type="text" id="ed-socio" value="${(mov.nombreSocio||'').replace(/"/g,'&quot;')}" placeholder="Nombre del socio o responsable" style="width:100%;"/></div>
+        <div style="grid-column:1/3;position:relative;"><label class="lbl">Socio / Responsable</label><input type="text" id="ed-socio" value="${(mov.nombreSocio||'').replace(/"/g,'&quot;')}" placeholder="Haz clic o escribe para buscar..." autocomplete="off" oninput="filtrarSociosEd()" onfocus="filtrarSociosEd()" onblur="setTimeout(()=>{const d=document.getElementById('ed-socio-dd');if(d)d.innerHTML=''},250)" style="width:100%;"/><div id="ed-socio-dd"></div></div>
         <div><label class="lbl">Concepto</label><select id="ed-cuenta" style="width:100%;">${optConcepto}</select></div>
         <div><label class="lbl">Monto</label><input type="number" id="ed-valor" value="${mov.valor||0}" min="0" style="width:100%;"/></div>
         <div><label class="lbl">Forma de Pago</label><select id="ed-fpago" style="width:100%;">${optFpago}</select></div>
