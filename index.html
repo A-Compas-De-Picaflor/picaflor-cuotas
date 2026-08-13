@@ -2008,6 +2008,16 @@ function getEstadoCelda(sid, anio, idx) {
   return cuotasCache[sid]?.[anio]?.[idx]?.estado || '';
 }
 
+// Estado a mostrar/calcular aplicando la regla de vencimiento automático:
+// un mes ya vencido, en blanco, de un socio activo, se considera impago (sin escribir en Airtable).
+// Respeta 'pagado', 'na' y 'previo'. Requiere el objeto socio para saber si está activo.
+function estadoVisual(socio, anio, idx) {
+  const est = getEstadoCelda(socio.id, anio, idx);
+  if(est) return est; // ya tiene estado definido: se respeta
+  if(socio.activo && mesVencido(anio, idx)) return 'impago'; // vencido y en blanco → impago automático
+  return '';
+}
+
 const pausa = ms => new Promise(r=>setTimeout(r,ms));
 
 // ===== LIMPIEZA DE DUPLICADOS =====
@@ -2137,10 +2147,12 @@ function mesVencido(anio,idx){
   return new Date()>new Date(Number(anio),idx+1,0);
 }
 function calcDeudaSocio(sid,anio){
-  const data=cuotasCache[sid]?.[anio]||{};
+  const socio=socios.find(s=>s.id===sid);
+  if(!socio) return 0;
   let d=0;
   for(let i=0;i<12;i++){
-    const est=(data[i]?.estado)||'';
+    // estadoVisual auto-marca impago solo a socios activos; para inactivos usa su estado real
+    const est=estadoVisual(socio,anio,i);
     if(est==='impago'&&mesVencido(anio,i))d+=VALOR_CUOTA;
   }
   return d;
@@ -2203,7 +2215,10 @@ async function marcarMesNATodos(idx){
 }
 function toggleCelda(sid,anio,idx){
   if(esSoloLectura()) return;
-  const nuevo = ciclarEstado(getEstadoCelda(sid,anio,idx));
+  const socio = socios.find(s=>s.id===sid);
+  // Partir del estado que el usuario VE (incluye el impago automático de meses vencidos)
+  const visto = socio ? estadoVisual(socio,anio,idx) : getEstadoCelda(sid,anio,idx);
+  const nuevo = ciclarEstado(visto);
   setEstadoCelda(sid,anio,idx,nuevo); // UI instantánea + guardado en cola
   renderCuotas();
 }
@@ -2242,7 +2257,7 @@ function renderCuotas(){
     const deuda=calcDeudaSocio(s.id,anio);totalDeuda+=deuda;if(deuda>0)conDeuda++;
     const op=s.activo?"":"opacity:.55;";const tag=s.activo?"":" <span style=\"font-size:9px;color:#666;\">[Inactivo]</span>";html+=`<tr><td class="col-nombre" style="${op}">${s.nombre}${tag}<br><span style="font-size:10px;color:var(--texto2);">${s.rut}</span></td>`;
     MESES.forEach((m,i)=>{
-      const fut=mesFuturo(anio,i);const est=getEstadoCelda(s.id,anio,i);
+      const fut=mesFuturo(anio,i);const est=estadoVisual(s,anio,i);
       const cls=claseEstado(est,fut);const ico=iconoEstado(est,fut);
       const clk=esSoloLectura()
     ? ''
