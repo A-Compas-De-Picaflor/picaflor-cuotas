@@ -628,19 +628,29 @@ async function proxyPost(action, tabla, extra={}) {
 }
 
 async function atGet(tabla, formula) {
-  let url = `${AT_URL}/${encodeURIComponent(tabla)}?pageSize=100`;
-  if(formula) url += `&filterByFormula=${encodeURIComponent(formula)}`;
-  let records = [], offset;
-  do {
-    const r = await fetch(url+(offset?`&offset=${offset}`:''), {
-      headers:{'Authorization':`Bearer ${getToken()}`}
-    });
-    const d = await r.json();
-    if(d.error) throw new Error(d.error.message);
-    records = records.concat(d.records||[]);
-    offset = d.offset;
-  } while(offset);
-  return records;
+  // Si el dispositivo no tiene token (ej: socio en su celular), leer vía proxy (token del lado servidor)
+  if(!getToken()){
+    return await proxyPost('get', tabla, formula?{formula}:{});
+  }
+  try {
+    let url = `${AT_URL}/${encodeURIComponent(tabla)}?pageSize=100`;
+    if(formula) url += `&filterByFormula=${encodeURIComponent(formula)}`;
+    let records = [], offset;
+    do {
+      const r = await fetch(url+(offset?`&offset=${offset}`:''), {
+        headers:{'Authorization':`Bearer ${getToken()}`}
+      });
+      const d = await r.json();
+      if(d.error) throw new Error(d.error.message||d.error);
+      records = records.concat(d.records||[]);
+      offset = d.offset;
+    } while(offset);
+    return records;
+  } catch(e) {
+    // Respaldo: si el token del dispositivo falla (inválido/vencido), intentar vía proxy
+    console.warn('atGet directo falló, usando proxy:', e.message);
+    return await proxyPost('get', tabla, formula?{formula}:{});
+  }
 }
 async function atCreate(tabla, fields) {
   const r = await fetch(`${AT_URL}/${encodeURIComponent(tabla)}`, {
