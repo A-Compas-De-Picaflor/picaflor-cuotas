@@ -259,6 +259,8 @@ tr:hover td{background:rgba(232,160,32,0.06);}
     <button class="tab-btn" onclick="showTab('socios')" id="tab-socios">👥 Socios</button>
     <button class="tab-btn" onclick="showTab('cuotas')" id="tab-cuotas">💳 Cuotas</button>
     <button class="tab-btn" onclick="showTab('banco')" id="tab-banco">🏦 Banco</button>
+    <button class="tab-btn" onclick="showTab('accesos')" id="tab-accesos">👁 Accesos</button>
+    <button class="tab-btn" onclick="showTab('morosidad')" id="tab-morosidad">⚠️ Morosidad</button>
     <button class="tab-btn" onclick="showTab('config')" id="tab-config">⚙️ Config</button>
   </div>
 
@@ -501,6 +503,43 @@ tr:hover td{background:rgba(232,160,32,0.06);}
       <div id="banco-resultado"></div>
     </div>
 
+    <div id="tab-accesos-content" style="display:none">
+      <div class="card">
+        <div class="card-title">👁 Registro de Accesos</div>
+        <p style="font-size:13px;color:var(--texto2);margin-bottom:14px;">Muestra qué socios han consultado su estado de cuotas y qué directores han ingresado a ver la información, con la fecha de su última visita.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
+          <input type="text" id="acc-buscar" placeholder="Buscar por nombre…" oninput="renderAccesos()" style="flex:1;min-width:200px;"/>
+          <select id="acc-filtro" onchange="renderAccesos()" style="width:auto;">
+            <option value="">Todos</option>
+            <option value="Socio">Solo socios</option>
+            <option value="Director">Solo directores</option>
+          </select>
+          <button class="btn-secondary btn-sm" onclick="cargarAccesos()">🔄 Actualizar</button>
+        </div>
+        <div id="acc-stats" style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:14px;"></div>
+        <div id="acc-lista"></div>
+      </div>
+    </div>
+
+    <div id="tab-morosidad-content" style="display:none">
+      <div class="card">
+        <div class="card-title">⚠️ Respuestas al Aviso de Morosidad</div>
+        <p style="font-size:13px;color:var(--texto2);margin-bottom:14px;">Socios con 6 o más cuotas impagas que respondieron al aviso (Art. 9° de los estatutos). Muestra qué decidió cada uno respecto a su continuidad.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
+          <input type="text" id="mor-buscar" placeholder="Buscar por nombre…" oninput="renderMorosidad()" style="flex:1;min-width:200px;"/>
+          <select id="mor-filtro" onchange="renderMorosidad()" style="width:auto;">
+            <option value="">Todas las respuestas</option>
+            <option value="continuar">Deseo continuar</option>
+            <option value="contacto">Contactará tesorería</option>
+            <option value="baja">Solicita baja</option>
+          </select>
+          <button class="btn-secondary btn-sm" onclick="cargarMorosidad()">🔄 Actualizar</button>
+        </div>
+        <div id="mor-stats" style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:14px;"></div>
+        <div id="mor-lista"></div>
+      </div>
+    </div>
+
     <div id="tab-config-content" style="display:none">
       <div class="card">
         <div class="card-title">⚙️ Configuración</div>
@@ -625,6 +664,131 @@ async function proxyPost(action, tabla, extra={}) {
   const d = await r.json();
   if(!d.ok) throw new Error(d.error||'Error proxy');
   return d.data;
+}
+
+// Registra un acceso (socio o director) en la hoja Accesos, de forma silenciosa:
+// nunca interrumpe el ingreso ni muestra error al usuario si falla.
+async function registrarAccesoServidor(tipo, nombre, identificador){
+  try {
+    await proxyPost('registrar','Accesos',{fields:{tipo, nombre, identificador:String(identificador||'')}});
+  } catch(e){ console.warn('No se pudo registrar el acceso:', e.message); }
+}
+
+let morosidadCache = [];
+async function cargarMorosidad(){
+  const lista=document.getElementById('mor-lista');
+  if(lista) lista.innerHTML='<p style="color:var(--texto2);font-size:13px;padding:10px;">Cargando…</p>';
+  try {
+    morosidadCache = await proxyPost('get','Morosidad');
+    renderMorosidad();
+  } catch(e){
+    if(lista) lista.innerHTML='<p style="color:var(--rojo);font-size:13px;padding:10px;">No se pudieron cargar las respuestas: '+e.message+'</p>';
+  }
+}
+
+function renderMorosidad(){
+  const cont=document.getElementById('mor-lista'); if(!cont) return;
+  const q=(document.getElementById('mor-buscar')?.value||'').toLowerCase().trim();
+  const filtro=document.getElementById('mor-filtro')?.value||'';
+  const clasifica=r=>{
+    const t=(r.respuesta||'').toLowerCase();
+    if(t.includes('continuar')||t.includes('al día')||t.includes('al dia')) return 'continuar';
+    if(t.includes('contacto')||t.includes('tesorería')||t.includes('tesoreria')) return 'contacto';
+    if(t.includes('baja')) return 'baja';
+    return 'otro';
+  };
+  let filas=morosidadCache.filter(r=>{
+    if(filtro && clasifica(r)!==filtro) return false;
+    if(q && !(r.nombre||'').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  filas.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+
+  const nCont=morosidadCache.filter(r=>clasifica(r)==='continuar').length;
+  const nContacto=morosidadCache.filter(r=>clasifica(r)==='contacto').length;
+  const nBaja=morosidadCache.filter(r=>clasifica(r)==='baja').length;
+  const stats=document.getElementById('mor-stats');
+  if(stats) stats.innerHTML=[
+    ['Desean continuar',nCont,'var(--verde)'],
+    ['Contactarán tesorería',nContacto,'var(--azul)'],
+    ['Solicitan baja',nBaja,'var(--rojo)']
+  ].map(([l,v,c])=>`<div class="stat"><div class="stat-label">${l}</div><div class="stat-val" style="color:${c};">${v}</div></div>`).join('');
+
+  if(!filas.length){
+    cont.innerHTML='<p style="color:var(--texto2);font-size:13px;padding:10px;">'+(morosidadCache.length?'Sin resultados para la búsqueda.':'Aún no hay respuestas registradas.')+'</p>';
+    return;
+  }
+  const badge=r=>{
+    const c=clasifica(r);
+    const estilos={
+      continuar:['rgba(15,110,86,0.15)','#0f6e56','Desea continuar'],
+      contacto:['rgba(36,80,128,0.15)','#4a90d9','Contactará tesorería'],
+      baja:['rgba(163,45,45,0.15)','#d9534f','Solicita baja'],
+      otro:['rgba(120,120,120,0.15)','#888','—']
+    };
+    const [bg,col,txt]=estilos[c];
+    return `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:${bg};color:${col};">${txt}</span>`;
+  };
+  cont.innerHTML=`<div style="overflow-x:auto;"><table class="tabla" style="width:100%;font-size:13px;">
+    <thead><tr><th>Socio</th><th style="text-align:center;">Cuotas</th><th>Respuesta</th><th>Fecha</th></tr></thead>
+    <tbody>${filas.map(r=>`<tr>
+      <td>${r.nombre||'—'}<br><span style="font-size:11px;color:var(--texto2);">${r.identificador||''}</span></td>
+      <td style="text-align:center;color:var(--rojo);font-weight:600;">${r.cuotas_impagas||'—'}</td>
+      <td>${badge(r)}</td>
+      <td style="white-space:nowrap;">${r.fecha||'—'}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+let accesosCache = [];
+async function cargarAccesos(){
+  const lista=document.getElementById('acc-lista');
+  if(lista) lista.innerHTML='<p style="color:var(--texto2);font-size:13px;padding:10px;">Cargando…</p>';
+  try {
+    accesosCache = await proxyPost('get','Accesos');
+    renderAccesos();
+  } catch(e){
+    if(lista) lista.innerHTML='<p style="color:var(--rojo);font-size:13px;padding:10px;">No se pudieron cargar los accesos: '+e.message+'</p>';
+  }
+}
+
+function renderAccesos(){
+  const cont=document.getElementById('acc-lista'); if(!cont) return;
+  const q=(document.getElementById('acc-buscar')?.value||'').toLowerCase().trim();
+  const filtroTipo=document.getElementById('acc-filtro')?.value||'';
+  let filas=accesosCache.filter(a=>{
+    if(filtroTipo && a.tipo!==filtroTipo) return false;
+    if(q && !(a.nombre||'').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  // Ordenar por fecha de último acceso, más reciente primero
+  filas.sort((a,b)=>(b.ultimo_acceso||'').localeCompare(a.ultimo_acceso||''));
+
+  // Estadísticas
+  const nSocios=accesosCache.filter(a=>a.tipo==='Socio').length;
+  const nDir=accesosCache.filter(a=>a.tipo==='Director').length;
+  const stats=document.getElementById('acc-stats');
+  if(stats) stats.innerHTML=[
+    ['Socios que consultaron',nSocios,'var(--verde)'],
+    ['Directores que ingresaron',nDir,'var(--accent)'],
+    ['Total registros',accesosCache.length,'var(--azul)']
+  ].map(([l,v,c])=>`<div class="stat"><div class="stat-label">${l}</div><div class="stat-val" style="color:${c};">${v}</div></div>`).join('');
+
+  if(!filas.length){
+    cont.innerHTML='<p style="color:var(--texto2);font-size:13px;padding:10px;">'+(accesosCache.length?'Sin resultados para la búsqueda.':'Aún no hay accesos registrados.')+'</p>';
+    return;
+  }
+  const badge=t=> t==='Director'
+    ? '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:rgba(232,160,32,0.18);color:#f2b94e;">Director</span>'
+    : '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:var(--verde-light);color:var(--verde);">Socio</span>';
+  cont.innerHTML=`<div style="overflow-x:auto;"><table class="tabla" style="width:100%;font-size:13px;">
+    <thead><tr><th>Tipo</th><th>Nombre</th><th>Último acceso</th><th style="text-align:center;">Visitas</th></tr></thead>
+    <tbody>${filas.map(a=>`<tr>
+      <td>${badge(a.tipo)}</td>
+      <td>${a.nombre||'—'}</td>
+      <td style="white-space:nowrap;">${a.ultimo_acceso||'—'}</td>
+      <td style="text-align:center;">${a.total_visitas||1}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
 }
 
 async function atGet(tabla, formula) {
@@ -776,6 +940,7 @@ async function loginSocio4() {
     } else if(matches.length===1){
       ROL='consulta';
       document.getElementById('login-loading').textContent='Cargando cuotas...';
+      registrarAccesoServidor('Socio', matches[0].nombre, matches[0].rut);
       await cargarConfig();
       await cargarCuotasAirtable();
       mostrarVistaSocio(matches[0]);
@@ -797,6 +962,7 @@ async function loginSocioFull() {
     if(match){
       ROL='consulta';
       document.getElementById('login-loading').textContent='Cargando cuotas...';
+      registrarAccesoServidor('Socio', match.nombre, match.rut);
       await cargarConfig();
       await cargarCuotasAirtable();
       mostrarVistaSocio(match);
@@ -819,11 +985,12 @@ async function loginDirectiva() {
     const recs = await atGet('Socios',`{rut}='${rut}'`);
     if(recs.length && normSocio(recs[0]).activo){
       ROL='directiva';
+      registrarAccesoServidor('Director', normSocio(recs[0]).nombre, rut);
       await cargarConfig();
       await cargarDatos();
       document.getElementById('login-screen').style.display='none';
       document.getElementById('app').style.display='block';
-      ['tab-registro','tab-comprobante','tab-detalle','tab-detchile','tab-detestado','tab-grafico','tab-socios','tab-banco','tab-config'].forEach(id=>{
+      ['tab-registro','tab-comprobante','tab-detalle','tab-detchile','tab-detestado','tab-grafico','tab-socios','tab-banco','tab-accesos','tab-morosidad','tab-config'].forEach(id=>{
         const el=document.getElementById(id);el.disabled=true;el.style.display='none';
       });
       document.getElementById('busq').disabled=true;
@@ -848,7 +1015,7 @@ async function iniciarApp(nombre='') {
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='block';
   const soloRes = ROL==='directiva';
-  ['tab-registro','tab-comprobante','tab-detalle','tab-detchile','tab-detestado','tab-grafico','tab-socios','tab-banco','tab-config'].forEach(id=>{
+  ['tab-registro','tab-comprobante','tab-detalle','tab-detchile','tab-detestado','tab-grafico','tab-socios','tab-banco','tab-accesos','tab-morosidad','tab-config'].forEach(id=>{
     const el = document.getElementById(id);
     el.disabled = soloRes;
     el.style.display = soloRes?'none':'';
@@ -1580,7 +1747,7 @@ function busquedaGlobal(){
 
 // ===== TABS =====
 function showTab(t){
-  ['registro','comprobante','detalle','resumen','grafico','socios','cuotas','banco','config'].forEach(id=>{
+  ['registro','comprobante','detalle','resumen','grafico','socios','cuotas','banco','accesos','morosidad','config'].forEach(id=>{
     document.getElementById('tab-'+id+'-content').style.display=id===t?'block':'none';
     document.getElementById('tab-'+id).classList.toggle('active',id===t);
   });
@@ -1589,6 +1756,8 @@ function showTab(t){
   if(tc&&te){ tc.classList.remove('active'); te.classList.remove('active'); }
   if(t==='detalle') renderDetalle();
   if(t==='resumen') renderResumen();
+  if(t==='accesos') cargarAccesos();
+  if(t==='morosidad') cargarMorosidad();
   if(t==='socios') renderSocios();
   if(t==='cuotas'){
     if(!cuotasCargadas)cargarCuotasAirtable().then(()=>renderCuotas());else renderCuotas();
@@ -2439,6 +2608,61 @@ function mostrarVistaSocio(socio){
       <button onclick="cerrarVistaSocio()" style="width:100%;margin-top:16px;padding:12px;background:var(--bg2);color:var(--texto);border:1px solid var(--accent);border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;">Cerrar sesión</button>
     </div></div>`;
   document.getElementById('login-screen').style.display='none';
+
+  // Aviso de morosidad: si el socio acumula 6 o más cuotas impagas (Art. 9° estatutos)
+  const cuotasImpagas = Math.round(deudaTotal / VALOR_CUOTA);
+  if(cuotasImpagas >= 6){
+    setTimeout(()=>mostrarAvisoMorosidad(socio, cuotasImpagas), 600);
+  }
+}
+
+// Modal de aviso de morosidad con las tres opciones de respuesta
+function mostrarAvisoMorosidad(socio, cuotasImpagas){
+  const club=getConf('nombre_club','Club de Cueca');
+  let ov=document.getElementById('morosidad-overlay');
+  if(!ov){ov=document.createElement('div');ov.id='morosidad-overlay';document.body.appendChild(ov);}
+  ov.style.cssText='position:fixed;inset:0;z-index:100000;background:rgba(10,15,25,0.75);display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;';
+  ov.innerHTML=`<div style="background:white;border-radius:16px;max-width:460px;width:100%;box-shadow:0 8px 48px rgba(0,0,0,0.4);overflow:hidden;">
+    <div style="background:#a32d2d;color:white;padding:16px 22px;font-size:16px;font-weight:700;">⚠️ Aviso importante</div>
+    <div style="padding:22px 24px;">
+      <p style="font-size:14px;color:#333;line-height:1.55;margin-bottom:12px;"><strong>Estimado/a socio/a:</strong></p>
+      <p style="font-size:14px;color:#333;line-height:1.55;margin-bottom:12px;">Según nuestros registros, usted mantiene <strong style="color:#a32d2d;">${cuotasImpagas} cuotas pendientes</strong>. El Artículo 9° de nuestros estatutos establece que el incumplimiento en el pago de las cuotas durante seis meses constituye una <strong>falta grave</strong>, que puede afectar su continuidad como socio/a.</p>
+      <p style="font-size:14px;color:#333;line-height:1.55;margin-bottom:16px;">Antes de tomar cualquier decisión, queremos saber de usted. Por favor, indíquenos cómo desea continuar:</p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button onclick="responderMorosidad('${socio.id}','continuar')" style="width:100%;padding:13px;background:#0f6e56;color:white;border:none;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;line-height:1.4;">Deseo continuar y me pondré al día con mis cuotas a la brevedad</button>
+        <button onclick="responderMorosidad('${socio.id}','contacto')" style="width:100%;padding:13px;background:#245080;color:white;border:none;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;line-height:1.4;">Me pondré en contacto con tesorería para ver mi situación</button>
+        <button onclick="responderMorosidad('${socio.id}','baja')" style="width:100%;padding:13px;background:#8a3a3a;color:white;border:none;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;line-height:1.4;">Lamentablemente no puedo continuar y solicito darme de baja</button>
+      </div>
+      <p style="font-size:11px;color:#888;margin-top:14px;text-align:center;">Su respuesta será recibida por la tesorería del club.</p>
+    </div></div>`;
+}
+
+async function responderMorosidad(sid, opcion){
+  const socio = socios.find(s=>s.id===sid);
+  if(!socio) return;
+  const deudaTotal = [String(new Date().getFullYear()-1),String(new Date().getFullYear())]
+    .reduce((sum,a)=>sum+calcDeudaSocio(sid,a),0);
+  const cuotasImpagas = Math.round(deudaTotal / VALOR_CUOTA);
+  const textos = {
+    continuar:'Deseo continuar y me pondré al día',
+    contacto:'Me pondré en contacto con tesorería',
+    baja:'Solicito darme de baja'
+  };
+  const ov=document.getElementById('morosidad-overlay');
+  if(ov) ov.innerHTML=`<div style="background:white;border-radius:16px;max-width:420px;width:100%;padding:30px 26px;text-align:center;box-shadow:0 8px 48px rgba(0,0,0,0.4);">
+    <div style="font-size:32px;margin-bottom:10px;">✓</div>
+    <div style="font-size:15px;font-weight:600;color:#333;margin-bottom:8px;">Gracias por responder</div>
+    <div style="font-size:13px;color:#666;line-height:1.5;">Su respuesta fue registrada y será revisada por la tesorería del club.</div>
+    <button onclick="document.getElementById('morosidad-overlay').remove()" style="margin-top:18px;padding:10px 28px;background:var(--bg2,#1a3a5c);color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">Entendido</button>
+  </div>`;
+  try {
+    await proxyPost('registrar','Morosidad',{fields:{
+      nombre: socio.nombre,
+      identificador: socio.rut,
+      cuotas_impagas: String(cuotasImpagas),
+      respuesta: textos[opcion]||opcion
+    }});
+  } catch(e){ console.warn('No se pudo registrar la respuesta de morosidad:', e.message); }
 }
 function cerrarVistaSocio(){
   const ps=document.getElementById('socio-screen');if(ps)ps.remove();
