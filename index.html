@@ -2362,11 +2362,11 @@ function mesVencido(anio,idx){
   return new Date()>new Date(Number(anio),idx+1,0);
 }
 function calcDeudaSocio(sid,anio){
-  const socio=socios.find(s=>s.id===sid);
-  if(!socio) return 0;
+  // Buscar el socio en la nómina; si no está (ej: modo consulta), asumir activo
+  // para el cálculo de auto-impago. Los impagos ya marcados se cuentan siempre.
+  const socio=socios.find(s=>s.id===sid) || {id:sid, activo:true};
   let d=0;
   for(let i=0;i<12;i++){
-    // estadoVisual auto-marca impago solo a socios activos; para inactivos usa su estado real
     const est=estadoVisual(socio,anio,i);
     if(est==='impago'&&mesVencido(anio,i))d+=VALOR_CUOTA;
   }
@@ -2629,20 +2629,29 @@ function mostrarAvisoMorosidad(socio, cuotasImpagas){
       <p style="font-size:14px;color:#333;line-height:1.55;margin-bottom:12px;">Según nuestros registros, usted mantiene <strong style="color:#a32d2d;">${cuotasImpagas} cuotas pendientes</strong>. El Artículo 9° de nuestros estatutos establece que el incumplimiento en el pago de las cuotas durante seis meses constituye una <strong>falta grave</strong>, que puede afectar su continuidad como socio/a.</p>
       <p style="font-size:14px;color:#333;line-height:1.55;margin-bottom:16px;">Antes de tomar cualquier decisión, queremos saber de usted. Por favor, indíquenos cómo desea continuar:</p>
       <div style="display:flex;flex-direction:column;gap:10px;">
-        <button onclick="responderMorosidad('${socio.id}','continuar')" style="width:100%;padding:13px;background:#0f6e56;color:white;border:none;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;line-height:1.4;">Deseo continuar y me pondré al día con mis cuotas a la brevedad</button>
-        <button onclick="responderMorosidad('${socio.id}','contacto')" style="width:100%;padding:13px;background:#245080;color:white;border:none;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;line-height:1.4;">Me pondré en contacto con tesorería para ver mi situación</button>
-        <button onclick="responderMorosidad('${socio.id}','baja')" style="width:100%;padding:13px;background:#8a3a3a;color:white;border:none;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;line-height:1.4;">Lamentablemente no puedo continuar y solicito darme de baja</button>
+        <button onclick="responderMorosidad('${socio.id}','continuar',event)" data-nombre="${(socio.nombre||'').replace(/"/g,'&quot;')}" data-rut="${socio.rut||''}" data-cuotas="${cuotasImpagas}" style="width:100%;padding:13px;background:#0f6e56;color:white;border:none;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;line-height:1.4;">Deseo continuar y me pondré al día con mis cuotas a la brevedad</button>
+        <button onclick="responderMorosidad('${socio.id}','contacto',event)" data-nombre="${(socio.nombre||'').replace(/"/g,'&quot;')}" data-rut="${socio.rut||''}" data-cuotas="${cuotasImpagas}" style="width:100%;padding:13px;background:#245080;color:white;border:none;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;line-height:1.4;">Me pondré en contacto con tesorería para ver mi situación</button>
+        <button onclick="responderMorosidad('${socio.id}','baja',event)" data-nombre="${(socio.nombre||'').replace(/"/g,'&quot;')}" data-rut="${socio.rut||''}" data-cuotas="${cuotasImpagas}" style="width:100%;padding:13px;background:#8a3a3a;color:white;border:none;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;line-height:1.4;">Lamentablemente no puedo continuar y solicito darme de baja</button>
       </div>
       <p style="font-size:11px;color:#888;margin-top:14px;text-align:center;">Su respuesta será recibida por la tesorería del club.</p>
     </div></div>`;
 }
 
-async function responderMorosidad(sid, opcion){
-  const socio = socios.find(s=>s.id===sid);
-  if(!socio) return;
-  const deudaTotal = [String(new Date().getFullYear()-1),String(new Date().getFullYear())]
-    .reduce((sum,a)=>sum+calcDeudaSocio(sid,a),0);
-  const cuotasImpagas = Math.round(deudaTotal / VALOR_CUOTA);
+async function responderMorosidad(sid, opcion, ev){
+  // Tomar los datos del botón (data-attributes), sin depender del array 'socios'
+  // que en modo consulta está vacío. Esto evita que la función se corte.
+  const btn = (ev && ev.currentTarget) || (window.event && window.event.currentTarget) || null;
+  let nombre='', rut='', cuotas='';
+  if(btn){
+    nombre = btn.getAttribute('data-nombre')||'';
+    rut    = btn.getAttribute('data-rut')||'';
+    cuotas = btn.getAttribute('data-cuotas')||'';
+  }
+  // Respaldo: si por algo no vinieron los datos, intentar desde el array
+  if(!nombre){
+    const socio = socios.find(s=>s.id===sid);
+    if(socio){ nombre=socio.nombre; rut=socio.rut; }
+  }
   const textos = {
     continuar:'Deseo continuar y me pondré al día',
     contacto:'Me pondré en contacto con tesorería',
@@ -2657,9 +2666,9 @@ async function responderMorosidad(sid, opcion){
   </div>`;
   try {
     await proxyPost('registrar','Morosidad',{fields:{
-      nombre: socio.nombre,
-      identificador: socio.rut,
-      cuotas_impagas: String(cuotasImpagas),
+      nombre: nombre,
+      identificador: rut,
+      cuotas_impagas: String(cuotas),
       respuesta: textos[opcion]||opcion
     }});
   } catch(e){ console.warn('No se pudo registrar la respuesta de morosidad:', e.message); }
