@@ -817,6 +817,9 @@ async function atGet(tabla, formula) {
   }
 }
 async function atCreate(tabla, fields) {
+  if(!getToken()){
+    return await proxyPost('create', tabla, {fields});
+  }
   const r = await fetch(`${AT_URL}/${encodeURIComponent(tabla)}`, {
     method:'POST',
     headers:{'Authorization':`Bearer ${getToken()}`,'Content-Type':'application/json'},
@@ -827,6 +830,9 @@ async function atCreate(tabla, fields) {
   return d.records[0];
 }
 async function atUpdate(tabla, id, fields) {
+  if(!getToken()){
+    return await proxyPost('update', tabla, {id, fields});
+  }
   const r = await fetch(`${AT_URL}/${encodeURIComponent(tabla)}/${id}`, {
     method:'PATCH',
     headers:{'Authorization':`Bearer ${getToken()}`,'Content-Type':'application/json'},
@@ -837,12 +843,19 @@ async function atUpdate(tabla, id, fields) {
   return d;
 }
 async function atDelete(tabla, id) {
+  if(!getToken()){
+    return await proxyPost('delete', tabla, {id});
+  }
   await fetch(`${AT_URL}/${encodeURIComponent(tabla)}/${id}`, {
     method:'DELETE',
     headers:{'Authorization':`Bearer ${getToken()}`}
   });
 }
 async function atBatchCreate(tabla, arr) {
+  if(!getToken()){
+    const recs = await proxyPost('batchCreate', tabla, {records:arr});
+    return (recs||[]).map(rec=>rec.id);
+  }
   const ids = [];
   for(let i=0;i<arr.length;i+=10){
     const r = await fetch(`${AT_URL}/${encodeURIComponent(tabla)}`, {
@@ -857,6 +870,9 @@ async function atBatchCreate(tabla, arr) {
   return ids;
 }
 async function atBatchDelete(tabla, ids) {
+  if(!getToken()){
+    return await proxyPost('batchDelete', tabla, {ids});
+  }
   for(let i=0;i<ids.length;i+=10){
     const params=ids.slice(i,i+10).map(id=>`records[]=${encodeURIComponent(id)}`).join('&');
     await fetch(`${AT_URL}/${encodeURIComponent(tabla)}?${params}`, {
