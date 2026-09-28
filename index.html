@@ -553,6 +553,7 @@ tr:hover td{background:rgba(232,160,32,0.06);}
             </div>
             <button class="btn-primary btn-sm" onclick="guardarToken()">💾 Guardar</button>
             <button class="btn-secondary btn-sm" onclick="probarToken()">🔗 Probar</button>
+            <button class="btn-secondary btn-sm" onclick="borrarToken()" style="color:var(--rojo);">🗑 Borrar</button>
           </div>
           <div id="cfg-at-status" style="font-size:12px;margin-top:8px;"></div>
         </div>
@@ -2761,10 +2762,22 @@ function cargarTokenUI() {
 }
 function guardarToken() {
   const val = document.getElementById('cfg-at-token').value.trim();
-  if(!val){toast('Ingresa el token primero.','error');return;}
+  if(!val){
+    // Campo vacío = borrar el token del navegador para usar el proxy (token del servidor)
+    localStorage.removeItem('acdp_at_token');
+    document.getElementById('cfg-at-status').innerHTML = '<span style="color:var(--verde);">✓ Token borrado — la app usará el proxy</span>';
+    toast('Token borrado. La app usará el proxy del servidor ✓','success');
+    return;
+  }
   localStorage.setItem('acdp_at_token', val);
   document.getElementById('cfg-at-status').innerHTML = '<span style="color:var(--verde);">✓ Token guardado</span>';
   toast('Token guardado ✓','success');
+}
+function borrarToken() {
+  localStorage.removeItem('acdp_at_token');
+  const tf=document.getElementById('cfg-at-token'); if(tf) tf.value='';
+  document.getElementById('cfg-at-status').innerHTML = '<span style="color:var(--verde);">✓ Token borrado — la app usará el proxy</span>';
+  toast('Token borrado. La app usará el proxy del servidor ✓','success');
 }
 async function probarToken() {
   const st = document.getElementById('cfg-at-status');
