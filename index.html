@@ -287,7 +287,13 @@ tr:hover td{background:rgba(232,160,32,0.06);}
           </div>
           <div><label class="lbl">Concepto *</label><select id="r-cuenta" onchange="onCuentaChange()"><option value="">— Seleccionar —</option></select></div>
           <div id="meses-section" class="span2" style="display:none">
-            <label class="lbl">Meses a pagar</label>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
+              <label class="lbl" style="margin:0;">Meses a pagar</label>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-size:12px;color:var(--texto2);">Año:</span>
+                <select id="r-anio-cuota" style="width:auto;padding:4px 8px;font-size:13px;"></select>
+              </div>
+            </div>
             <div class="meses-grid" id="meses-grid"></div>
           </div>
           <div><label class="lbl">Valor (CLP) *</label><input type="number" id="r-valor" placeholder="0" min="0"/></div>
@@ -1151,6 +1157,8 @@ async function cargarDatos() {
 function actualizarAnios() {
   const anios = [...new Set(movimientos.map(m=>(m.fecha||'').slice(0,4)))].filter(Boolean).sort().reverse();
   const act = new Date().getFullYear().toString();
+  const sig = (new Date().getFullYear()+1).toString(); // año siguiente (para pagos adelantados)
+  if(!anios.includes(sig)) anios.unshift(sig);
   if(!anios.includes(act)) anios.unshift(act);
   ['f-anio','res-anio','graf-anio','cuotas-anio'].forEach(id=>{
     const sel=document.getElementById(id); if(!sel) return;
@@ -1204,6 +1212,12 @@ function onCuentaChange() {
 }
 function buildMeses() {
   document.getElementById('meses-grid').innerHTML=MESES.map(m=>`<label class="mes-cb"><input type="checkbox" value="${m}" name="mes"/> ${m}</label>`).join('');
+  // Selector de año de la cuota: año actual y siguiente (para pagos adelantados)
+  const sel=document.getElementById('r-anio-cuota');
+  if(sel){
+    const act=new Date().getFullYear();
+    sel.innerHTML=[act, act+1].map(a=>`<option ${a===act?'selected':''}>${a}</option>`).join('');
+  }
 }
 function getMeses() {
   return [...document.querySelectorAll('#meses-grid input:checked')].map(c=>c.value).join(', ');
@@ -1215,6 +1229,7 @@ function limpiarForm() {
   document.getElementById('r-obs').value='';
   document.getElementById('r-fpago').value='Efectivo';
   document.getElementById('r-banco').value='';
+  const selAC=document.getElementById('r-anio-cuota'); if(selAC) selAC.value=new Date().getFullYear().toString();
   document.querySelectorAll('#meses-grid input').forEach(c=>c.checked=false);
   setTipo('Ingreso');
 }
@@ -1283,7 +1298,9 @@ async function guardarMovimiento() {
     // Actualizar tabla de cuotas si es pago de cuota
     if((cuenta==='Pago Cuota Mensual'||cuenta==='Abono Cuota')&&socio&&meses){
       const socObj=socios.find(s=>s.nombre===socio);
-      if(socObj){ marcarMesesPagados(socObj.id,meses,fecha.slice(0,4)); }
+      // Año de la cuota: el elegido en el selector (permite pagos adelantados), con respaldo al año de la fecha
+      const anioCuota=document.getElementById('r-anio-cuota')?.value||fecha.slice(0,4);
+      if(socObj){ marcarMesesPagados(socObj.id,meses,anioCuota); }
     }
     toast('Movimiento N°'+numero+' guardado ✓','success');
   } catch(e){toast('Error: '+e.message,'error');}
@@ -2394,6 +2411,7 @@ function aniosCuotas(){
   const set=new Set();
   Object.values(cuotasCache).forEach(porAnio=>Object.keys(porAnio||{}).forEach(a=>set.add(a)));
   const act=new Date().getFullYear().toString(); set.add(act);
+  set.add((new Date().getFullYear()+1).toString()); // año siguiente (pagos adelantados)
   return [...set].filter(Boolean).sort().reverse();
 }
 // Deuda histórica de un socio: suma de la deuda vencida de todos los años.
