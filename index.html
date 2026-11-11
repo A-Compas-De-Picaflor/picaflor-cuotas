@@ -1514,6 +1514,22 @@ function calcularAnual(anio){
     return {mes, ing, egr, saldo:ing-egr};
   });
 
+  // Saldo ACUMULADO por banco (todos los períodos): lo que realmente hay hoy en cada cuenta
+  const saldoAcum = (bk)=>{
+    const i = movimientos.filter(m=>m.tipo==='Ingreso' && (m.banco||'')===bk).reduce((s,m)=>s+m.valor,0);
+    const e = movimientos.filter(m=>m.tipo==='Egreso'  && (m.banco||'')===bk).reduce((s,m)=>s+m.valor,0);
+    return i-e;
+  };
+  const saldoInicial = Number(getConf('saldo_inicial','0'));
+  const acumulado = {
+    'Banco de Chile': saldoAcum('Banco de Chile'),
+    'Banco Estado':   saldoAcum('Banco Estado'),
+    'Efectivo / sin banco': saldoAcum('')
+  };
+  const saldoRealTotal = saldoInicial
+    + movimientos.filter(m=>m.tipo==='Ingreso').reduce((s,m)=>s+m.valor,0)
+    - movimientos.filter(m=>m.tipo==='Egreso').reduce((s,m)=>s+m.valor,0);
+
   // Cuotas: recaudado del año vs deuda del año (socios activos)
   let cuotasRecaudado=0, cuotasDeuda=0;
   try {
@@ -1526,7 +1542,7 @@ function calcularAnual(anio){
     });
   } catch(e){}
 
-  return {anio, totalIng, totalEgr, resultado:totalIng-totalEgr, bancos, ingPorConcepto, egrPorConcepto, mensual, cuotasRecaudado, cuotasDeuda, nMovs:movs.length};
+  return {anio, totalIng, totalEgr, resultado:totalIng-totalEgr, bancos, ingPorConcepto, egrPorConcepto, mensual, cuotasRecaudado, cuotasDeuda, nMovs:movs.length, acumulado, saldoRealTotal, saldoInicial};
 }
 
 function renderAnual(){
@@ -1559,10 +1575,24 @@ function renderAnual(){
       <p style="font-size:12px;color:var(--texto2);margin-top:10px;">${d.nMovs} movimiento${d.nMovs!==1?'s':''} registrado${d.nMovs!==1?'s':''} en ${anio}.</p>
     </div>
 
+    <div class="card" style="border:1px solid var(--accent);">
+      <div class="card-title">🏦 Saldo disponible en cuentas (acumulado, todos los períodos)</div>
+      <p style="font-size:12px;color:var(--texto2);margin-bottom:12px;">Lo que realmente hay hoy en cada cuenta, considerando toda la historia de movimientos (no solo ${anio}).</p>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;">
+        <div class="stat" style="flex:1;min-width:150px;border-left:3px solid #3b6fd4;padding-left:12px;"><div class="stat-label">🔵 Banco de Chile</div><div class="stat-val" style="color:var(--texto);">${fmt(d.acumulado['Banco de Chile'])}</div></div>
+        <div class="stat" style="flex:1;min-width:150px;border-left:3px solid #e8a020;padding-left:12px;"><div class="stat-label">🟡 Banco Estado</div><div class="stat-val" style="color:var(--texto);">${fmt(d.acumulado['Banco Estado'])}</div></div>
+        <div class="stat" style="flex:1;min-width:150px;border-left:3px solid #7a869a;padding-left:12px;"><div class="stat-label">💵 Efectivo / sin banco</div><div class="stat-val" style="color:var(--texto);">${fmt(d.acumulado['Efectivo / sin banco'])}</div></div>
+      </div>
+      <div style="padding-top:12px;border-top:1px solid var(--borde);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <span style="font-size:13px;color:var(--texto2);">Saldo real total del club${d.saldoInicial?' (incluye saldo inicial '+fmt(d.saldoInicial)+')':''}:</span>
+        <span style="font-size:22px;font-weight:700;color:var(--accent);">${fmt(d.saldoRealTotal)}</span>
+      </div>
+    </div>
+
     <div class="card">
-      <div class="card-title">💰 Desglose por banco</div>
+      <div class="card-title">💰 Movimiento del año ${anio} por banco</div>
       <div style="overflow-x:auto;"><table class="tabla" style="width:100%;font-size:13px;">
-        <thead><tr><th>Cuenta</th><th style="text-align:right;">Ingresos</th><th style="text-align:right;">Egresos</th><th style="text-align:right;">Saldo</th></tr></thead>
+        <thead><tr><th>Cuenta</th><th style="text-align:right;">Ingresos ${anio}</th><th style="text-align:right;">Egresos ${anio}</th><th style="text-align:right;">Resultado ${anio}</th></tr></thead>
         <tbody>
           ${filaBanco('Banco de Chile', d.bancos['Banco de Chile'], '#3b6fd4')}
           ${filaBanco('Banco Estado', d.bancos['Banco Estado'], '#e8a020')}
@@ -1628,12 +1658,20 @@ function exportarAnualExcel(){
     ['ESTADO FINANCIERO ANUAL — Club A Compás de Picaflor'],
     ['Año', d.anio],
     [],
+    ['SALDO DISPONIBLE EN CUENTAS (acumulado, todos los períodos)'],
+    ['Cuenta','Saldo'],
+    ['Banco de Chile', d.acumulado['Banco de Chile']],
+    ['Banco Estado', d.acumulado['Banco Estado']],
+    ['Efectivo / sin banco', d.acumulado['Efectivo / sin banco']],
+    ['SALDO REAL TOTAL DEL CLUB', d.saldoRealTotal],
+    [],
+    ['MOVIMIENTO DEL AÑO '+d.anio],
     ['Total Ingresos', d.totalIng],
     ['Total Egresos', d.totalEgr],
     ['Resultado del año', d.resultado],
     [],
-    ['DESGLOSE POR BANCO'],
-    ['Cuenta','Ingresos','Egresos','Saldo'],
+    ['MOVIMIENTO DEL AÑO POR BANCO'],
+    ['Cuenta','Ingresos','Egresos','Resultado'],
     ['Banco de Chile', d.bancos['Banco de Chile'].ing, d.bancos['Banco de Chile'].egr, d.bancos['Banco de Chile'].saldo],
     ['Banco Estado', d.bancos['Banco Estado'].ing, d.bancos['Banco Estado'].egr, d.bancos['Banco Estado'].saldo],
     ['Efectivo / sin banco', d.bancos['Efectivo / sin banco'].ing, d.bancos['Efectivo / sin banco'].egr, d.bancos['Efectivo / sin banco'].saldo],
@@ -1691,8 +1729,16 @@ function exportarAnualPDF(){
       <div class="cardp"><div class="lbl">Total Egresos</div><div class="val rojo">${f(d.totalEgr)}</div></div>
       <div class="cardp"><div class="lbl">Resultado</div><div class="val azul">${f(d.resultado)}</div></div>
     </div>
-    <h2>Desglose por banco</h2>
-    <table><thead><tr><th>Cuenta</th><th class="r">Ingresos</th><th class="r">Egresos</th><th class="r">Saldo</th></tr></thead>
+    <h2>Saldo disponible en cuentas (acumulado, todos los períodos)</h2>
+    <table><thead><tr><th>Cuenta</th><th class="r">Saldo</th></tr></thead>
+    <tbody>
+      <tr><td>Banco de Chile</td><td class="r"><b>${f(d.acumulado['Banco de Chile'])}</b></td></tr>
+      <tr><td>Banco Estado</td><td class="r"><b>${f(d.acumulado['Banco Estado'])}</b></td></tr>
+      <tr><td>Efectivo / sin banco</td><td class="r"><b>${f(d.acumulado['Efectivo / sin banco'])}</b></td></tr>
+      <tr class="tot"><td>SALDO REAL TOTAL DEL CLUB</td><td class="r">${f(d.saldoRealTotal)}</td></tr>
+    </tbody></table>
+    <h2>Movimiento del año ${d.anio} por banco</h2>
+    <table><thead><tr><th>Cuenta</th><th class="r">Ingresos</th><th class="r">Egresos</th><th class="r">Resultado</th></tr></thead>
     <tbody>${filaB('Banco de Chile',d.bancos['Banco de Chile'])}${filaB('Banco Estado',d.bancos['Banco Estado'])}${filaB('Efectivo / sin banco',d.bancos['Efectivo / sin banco'])}
     <tr class="tot"><td>TOTAL</td><td class="r">${f(d.totalIng)}</td><td class="r">${f(d.totalEgr)}</td><td class="r">${f(d.resultado)}</td></tr></tbody></table>
     <h2>Ingresos por concepto</h2>
