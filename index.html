@@ -261,6 +261,7 @@ tr:hover td{background:rgba(232,160,32,0.06);}
     <button class="tab-btn" onclick="showTab('banco')" id="tab-banco">🏦 Banco</button>
     <button class="tab-btn" onclick="showTab('accesos')" id="tab-accesos">👁 Accesos</button>
     <button class="tab-btn" onclick="showTab('morosidad')" id="tab-morosidad">⚠️ Morosidad</button>
+    <button class="tab-btn" onclick="showTab('anual')" id="tab-anual">📊 Estado Anual</button>
     <button class="tab-btn" onclick="showTab('config')" id="tab-config">⚙️ Config</button>
   </div>
 
@@ -544,6 +545,21 @@ tr:hover td{background:rgba(232,160,32,0.06);}
         <div id="mor-stats" style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:14px;"></div>
         <div id="mor-lista"></div>
       </div>
+    </div>
+
+    <div id="tab-anual-content" style="display:none">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+          <div class="card-title" style="margin:0;">📊 Estado Financiero Anual</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <label class="lbl" style="margin:0;">Año:</label>
+            <select id="anual-anio" onchange="renderAnual()" style="width:auto;"></select>
+            <button class="btn-secondary btn-sm" onclick="exportarAnualExcel()">⬇ Excel</button>
+            <button class="btn-secondary btn-sm" onclick="exportarAnualPDF()">🖨 PDF</button>
+          </div>
+        </div>
+      </div>
+      <div id="anual-contenido"></div>
     </div>
 
     <div id="tab-config-content" style="display:none">
@@ -1013,7 +1029,7 @@ async function loginDirectiva() {
       await cargarDatos();
       document.getElementById('login-screen').style.display='none';
       document.getElementById('app').style.display='block';
-      ['tab-registro','tab-comprobante','tab-detalle','tab-detchile','tab-detestado','tab-grafico','tab-socios','tab-banco','tab-accesos','tab-morosidad','tab-config'].forEach(id=>{
+      ['tab-registro','tab-comprobante','tab-detalle','tab-detchile','tab-detestado','tab-grafico','tab-socios','tab-banco','tab-accesos','tab-morosidad','tab-anual','tab-config'].forEach(id=>{
         const el=document.getElementById(id);el.disabled=true;el.style.display='none';
       });
       document.getElementById('busq').disabled=true;
@@ -1038,7 +1054,7 @@ async function iniciarApp(nombre='') {
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='block';
   const soloRes = ROL==='directiva';
-  ['tab-registro','tab-comprobante','tab-detalle','tab-detchile','tab-detestado','tab-grafico','tab-socios','tab-banco','tab-accesos','tab-morosidad','tab-config'].forEach(id=>{
+  ['tab-registro','tab-comprobante','tab-detalle','tab-detchile','tab-detestado','tab-grafico','tab-socios','tab-banco','tab-accesos','tab-morosidad','tab-anual','tab-config'].forEach(id=>{
     const el = document.getElementById(id);
     el.disabled = soloRes;
     el.style.display = soloRes?'none':'';
@@ -1445,6 +1461,258 @@ async function eliminarMov(id){
 }
 
 // ===== RESUMEN =====
+// ===== ESTADO FINANCIERO ANUAL =====
+let anualDatos = null; // guarda el cálculo para exportar
+
+function initAnual(){
+  const sel=document.getElementById('anual-anio');
+  if(!sel) return;
+  // Años con movimientos + año actual + siguiente
+  const set=new Set(movimientos.map(m=>(m.fecha||'').slice(0,4)).filter(Boolean));
+  const act=new Date().getFullYear();
+  set.add(String(act)); set.add(String(act+1));
+  const anios=[...set].filter(Boolean).sort().reverse();
+  const actual = sel.value || String(act);
+  sel.innerHTML = anios.map(a=>`<option ${a===actual?'selected':''}>${a}</option>`).join('');
+  renderAnual();
+}
+
+// Calcula todos los datos del estado anual para un año
+function calcularAnual(anio){
+  const movs = movimientos.filter(m=>(m.fecha||'').slice(0,4)===anio);
+  const ingresos = movs.filter(m=>m.tipo==='Ingreso');
+  const egresos  = movs.filter(m=>m.tipo==='Egreso');
+  const totalIng = ingresos.reduce((s,m)=>s+m.valor,0);
+  const totalEgr = egresos.reduce((s,m)=>s+m.valor,0);
+
+  // Por banco
+  const porBanco = (bk)=>{
+    const i = ingresos.filter(m=>(m.banco||'')===bk).reduce((s,m)=>s+m.valor,0);
+    const e = egresos.filter(m=>(m.banco||'')===bk).reduce((s,m)=>s+m.valor,0);
+    return {ing:i, egr:e, saldo:i-e};
+  };
+  const bancos = {
+    'Banco de Chile': porBanco('Banco de Chile'),
+    'Banco Estado':   porBanco('Banco Estado'),
+    'Efectivo / sin banco': porBanco('')
+  };
+
+  // Por concepto
+  const porConcepto = (lista)=>{
+    const map={};
+    lista.forEach(m=>{ const c=m.cuenta||'(sin concepto)'; map[c]=(map[c]||0)+m.valor; });
+    return Object.entries(map).map(([concepto,total])=>({concepto,total})).sort((a,b)=>b.total-a.total);
+  };
+  const ingPorConcepto = porConcepto(ingresos);
+  const egrPorConcepto = porConcepto(egresos);
+
+  // Evolución mensual
+  const mensual = MESES.map((mes,i)=>{
+    const mm = String(i+1).padStart(2,'0');
+    const ing = ingresos.filter(m=>(m.fecha||'').slice(5,7)===mm).reduce((s,m)=>s+m.valor,0);
+    const egr = egresos.filter(m=>(m.fecha||'').slice(5,7)===mm).reduce((s,m)=>s+m.valor,0);
+    return {mes, ing, egr, saldo:ing-egr};
+  });
+
+  // Cuotas: recaudado del año vs deuda del año (socios activos)
+  let cuotasRecaudado=0, cuotasDeuda=0;
+  try {
+    socios.filter(s=>s.activo).forEach(s=>{
+      for(let i=0;i<12;i++){
+        const est=estadoVisual(s,anio,i);
+        if(est==='pagado') cuotasRecaudado+=VALOR_CUOTA;
+        else if(est==='impago'&&mesVencido(anio,i)) cuotasDeuda+=VALOR_CUOTA;
+      }
+    });
+  } catch(e){}
+
+  return {anio, totalIng, totalEgr, resultado:totalIng-totalEgr, bancos, ingPorConcepto, egrPorConcepto, mensual, cuotasRecaudado, cuotasDeuda, nMovs:movs.length};
+}
+
+function renderAnual(){
+  const sel=document.getElementById('anual-anio');
+  const anio = sel?.value || String(new Date().getFullYear());
+  const d = calcularAnual(anio);
+  anualDatos = d;
+  const cont=document.getElementById('anual-contenido');
+  if(!cont) return;
+
+  const tarjeta=(label,valor,color)=>`<div class="stat" style="flex:1;min-width:140px;"><div class="stat-label">${label}</div><div class="stat-val" style="color:${color};">${fmt(valor)}</div></div>`;
+  const filaBanco=(nombre,b,color)=>`<tr>
+    <td style="font-weight:500;border-left:3px solid ${color};padding-left:10px;">${nombre}</td>
+    <td style="text-align:right;color:var(--verde);">${fmt(b.ing)}</td>
+    <td style="text-align:right;color:var(--rojo);">${fmt(b.egr)}</td>
+    <td style="text-align:right;font-weight:700;color:${b.saldo>=0?'var(--accent)':'var(--rojo)'};">${fmt(b.saldo)}</td></tr>`;
+
+  const filasConcepto=(arr,color)=> arr.length
+    ? arr.map(c=>`<tr><td>${c.concepto}</td><td style="text-align:right;color:${color};font-weight:600;">${fmt(c.total)}</td></tr>`).join('')
+    : '<tr><td colspan="2" style="color:var(--texto2);text-align:center;">Sin movimientos</td></tr>';
+
+  cont.innerHTML=`
+    <div class="card">
+      <div class="card-title">Resumen del año ${anio}</div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;">
+        ${tarjeta('Total Ingresos', d.totalIng, 'var(--verde)')}
+        ${tarjeta('Total Egresos', d.totalEgr, 'var(--rojo)')}
+        ${tarjeta('Resultado del año', d.resultado, d.resultado>=0?'var(--accent)':'var(--rojo)')}
+      </div>
+      <p style="font-size:12px;color:var(--texto2);margin-top:10px;">${d.nMovs} movimiento${d.nMovs!==1?'s':''} registrado${d.nMovs!==1?'s':''} en ${anio}.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">💰 Desglose por banco</div>
+      <div style="overflow-x:auto;"><table class="tabla" style="width:100%;font-size:13px;">
+        <thead><tr><th>Cuenta</th><th style="text-align:right;">Ingresos</th><th style="text-align:right;">Egresos</th><th style="text-align:right;">Saldo</th></tr></thead>
+        <tbody>
+          ${filaBanco('Banco de Chile', d.bancos['Banco de Chile'], '#3b6fd4')}
+          ${filaBanco('Banco Estado', d.bancos['Banco Estado'], '#e8a020')}
+          ${filaBanco('Efectivo / sin banco', d.bancos['Efectivo / sin banco'], '#7a869a')}
+        </tbody>
+        <tfoot><tr style="border-top:2px solid var(--borde);font-weight:700;">
+          <td>TOTAL</td>
+          <td style="text-align:right;color:var(--verde);">${fmt(d.totalIng)}</td>
+          <td style="text-align:right;color:var(--rojo);">${fmt(d.totalEgr)}</td>
+          <td style="text-align:right;color:${d.resultado>=0?'var(--accent)':'var(--rojo)'};">${fmt(d.resultado)}</td>
+        </tr></tfoot>
+      </table></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">
+      <div class="card">
+        <div class="card-title">📥 Ingresos por concepto</div>
+        <table class="tabla" style="width:100%;font-size:13px;"><tbody>${filasConcepto(d.ingPorConcepto,'var(--verde)')}</tbody>
+        <tfoot><tr style="border-top:2px solid var(--borde);font-weight:700;"><td>Total</td><td style="text-align:right;color:var(--verde);">${fmt(d.totalIng)}</td></tr></tfoot></table>
+      </div>
+      <div class="card">
+        <div class="card-title">📤 Egresos por concepto</div>
+        <table class="tabla" style="width:100%;font-size:13px;"><tbody>${filasConcepto(d.egrPorConcepto,'var(--rojo)')}</tbody>
+        <tfoot><tr style="border-top:2px solid var(--borde);font-weight:700;"><td>Total</td><td style="text-align:right;color:var(--rojo);">${fmt(d.totalEgr)}</td></tr></tfoot></table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📅 Evolución mensual ${anio}</div>
+      <div style="overflow-x:auto;"><table class="tabla" style="width:100%;font-size:13px;">
+        <thead><tr><th>Mes</th><th style="text-align:right;">Ingresos</th><th style="text-align:right;">Egresos</th><th style="text-align:right;">Resultado</th></tr></thead>
+        <tbody>${d.mensual.map(m=>`<tr>
+          <td>${m.mes}</td>
+          <td style="text-align:right;color:${m.ing?'var(--verde)':'#999'};">${m.ing?fmt(m.ing):'—'}</td>
+          <td style="text-align:right;color:${m.egr?'var(--rojo)':'#999'};">${m.egr?fmt(m.egr):'—'}</td>
+          <td style="text-align:right;font-weight:600;color:${m.saldo>0?'var(--accent)':m.saldo<0?'var(--rojo)':'#999'};">${(m.ing||m.egr)?fmt(m.saldo):'—'}</td>
+        </tr>`).join('')}</tbody>
+        <tfoot><tr style="border-top:2px solid var(--borde);font-weight:700;">
+          <td>TOTAL</td>
+          <td style="text-align:right;color:var(--verde);">${fmt(d.totalIng)}</td>
+          <td style="text-align:right;color:var(--rojo);">${fmt(d.totalEgr)}</td>
+          <td style="text-align:right;color:${d.resultado>=0?'var(--accent)':'var(--rojo)'};">${fmt(d.resultado)}</td>
+        </tr></tfoot>
+      </table></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🎫 Estado de cuotas ${anio}</div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;">
+        ${tarjeta('Recaudado en cuotas', d.cuotasRecaudado, 'var(--verde)')}
+        ${tarjeta('Deuda de cuotas (vencida)', d.cuotasDeuda, 'var(--rojo)')}
+      </div>
+      <p style="font-size:12px;color:var(--texto2);margin-top:10px;">Calculado sobre socios activos. "Recaudado" cuenta las cuotas marcadas como pagadas; "deuda" cuenta los meses vencidos no pagados.</p>
+    </div>`;
+}
+
+function exportarAnualExcel(){
+  if(!anualDatos){ toast('Abre primero el estado anual','error'); return; }
+  const d=anualDatos;
+  const wb=XLSX.utils.book_new();
+  // Hoja 1: Resumen
+  const resumen=[
+    ['ESTADO FINANCIERO ANUAL — Club A Compás de Picaflor'],
+    ['Año', d.anio],
+    [],
+    ['Total Ingresos', d.totalIng],
+    ['Total Egresos', d.totalEgr],
+    ['Resultado del año', d.resultado],
+    [],
+    ['DESGLOSE POR BANCO'],
+    ['Cuenta','Ingresos','Egresos','Saldo'],
+    ['Banco de Chile', d.bancos['Banco de Chile'].ing, d.bancos['Banco de Chile'].egr, d.bancos['Banco de Chile'].saldo],
+    ['Banco Estado', d.bancos['Banco Estado'].ing, d.bancos['Banco Estado'].egr, d.bancos['Banco Estado'].saldo],
+    ['Efectivo / sin banco', d.bancos['Efectivo / sin banco'].ing, d.bancos['Efectivo / sin banco'].egr, d.bancos['Efectivo / sin banco'].saldo],
+    ['TOTAL', d.totalIng, d.totalEgr, d.resultado],
+    [],
+    ['ESTADO DE CUOTAS'],
+    ['Recaudado en cuotas', d.cuotasRecaudado],
+    ['Deuda de cuotas (vencida)', d.cuotasDeuda],
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumen), 'Resumen');
+  // Hoja 2: Por concepto
+  const conceptos=[['INGRESOS POR CONCEPTO'],['Concepto','Total'],
+    ...d.ingPorConcepto.map(c=>[c.concepto,c.total]),
+    ['Total ingresos', d.totalIng], [],
+    ['EGRESOS POR CONCEPTO'],['Concepto','Total'],
+    ...d.egrPorConcepto.map(c=>[c.concepto,c.total]),
+    ['Total egresos', d.totalEgr]];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(conceptos), 'Por concepto');
+  // Hoja 3: Mensual
+  const mensual=[['EVOLUCIÓN MENSUAL '+d.anio],['Mes','Ingresos','Egresos','Resultado'],
+    ...d.mensual.map(m=>[m.mes,m.ing,m.egr,m.saldo]),
+    ['TOTAL', d.totalIng, d.totalEgr, d.resultado]];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(mensual), 'Mensual');
+  XLSX.writeFile(wb, `Estado_Anual_Picaflor_${d.anio}.xlsx`);
+  toast('Excel generado ✓','success');
+}
+
+function exportarAnualPDF(){
+  if(!anualDatos){ toast('Abre primero el estado anual','error'); return; }
+  const d=anualDatos;
+  const f=n=>fmt(n);
+  const filaB=(nombre,b)=>`<tr><td>${nombre}</td><td class="r">${f(b.ing)}</td><td class="r">${f(b.egr)}</td><td class="r"><b>${f(b.saldo)}</b></td></tr>`;
+  const w=window.open('','_blank');
+  w.document.write(`<html><head><meta charset="utf-8"><title>Estado Anual ${d.anio}</title>
+    <style>
+      body{font-family:'Segoe UI',Arial,sans-serif;color:#222;padding:30px;font-size:13px;}
+      h1{font-size:20px;color:#1a3a5c;margin-bottom:2px;}
+      h2{font-size:14px;color:#b87d10;border-bottom:1px solid #ddd;padding-bottom:4px;margin-top:22px;}
+      .sub{color:#666;font-size:12px;margin-bottom:10px;}
+      table{width:100%;border-collapse:collapse;margin-top:6px;}
+      th,td{padding:6px 8px;border-bottom:1px solid #eee;text-align:left;}
+      th{background:#f4f6f8;font-size:12px;}
+      .r{text-align:right;}
+      .tot{font-weight:700;border-top:2px solid #ccc;}
+      .cards{display:flex;gap:16px;margin:10px 0;}
+      .cardp{flex:1;border:1px solid #ddd;border-radius:8px;padding:12px;}
+      .cardp .lbl{font-size:11px;color:#666;text-transform:uppercase;}
+      .cardp .val{font-size:18px;font-weight:700;margin-top:4px;}
+      .verde{color:#0f6e56;} .rojo{color:#a32d2d;} .azul{color:#1a3a5c;}
+    </style></head><body>
+    <h1>Estado Financiero Anual</h1>
+    <div class="sub">Club de Cueca A Compás de Picaflor — Año ${d.anio} · Emitido el ${new Date().toLocaleDateString('es-CL')}</div>
+    <div class="cards">
+      <div class="cardp"><div class="lbl">Total Ingresos</div><div class="val verde">${f(d.totalIng)}</div></div>
+      <div class="cardp"><div class="lbl">Total Egresos</div><div class="val rojo">${f(d.totalEgr)}</div></div>
+      <div class="cardp"><div class="lbl">Resultado</div><div class="val azul">${f(d.resultado)}</div></div>
+    </div>
+    <h2>Desglose por banco</h2>
+    <table><thead><tr><th>Cuenta</th><th class="r">Ingresos</th><th class="r">Egresos</th><th class="r">Saldo</th></tr></thead>
+    <tbody>${filaB('Banco de Chile',d.bancos['Banco de Chile'])}${filaB('Banco Estado',d.bancos['Banco Estado'])}${filaB('Efectivo / sin banco',d.bancos['Efectivo / sin banco'])}
+    <tr class="tot"><td>TOTAL</td><td class="r">${f(d.totalIng)}</td><td class="r">${f(d.totalEgr)}</td><td class="r">${f(d.resultado)}</td></tr></tbody></table>
+    <h2>Ingresos por concepto</h2>
+    <table><tbody>${d.ingPorConcepto.map(c=>`<tr><td>${c.concepto}</td><td class="r">${f(c.total)}</td></tr>`).join('')}<tr class="tot"><td>Total</td><td class="r">${f(d.totalIng)}</td></tr></tbody></table>
+    <h2>Egresos por concepto</h2>
+    <table><tbody>${d.egrPorConcepto.map(c=>`<tr><td>${c.concepto}</td><td class="r">${f(c.total)}</td></tr>`).join('')}<tr class="tot"><td>Total</td><td class="r">${f(d.totalEgr)}</td></tr></tbody></table>
+    <h2>Evolución mensual</h2>
+    <table><thead><tr><th>Mes</th><th class="r">Ingresos</th><th class="r">Egresos</th><th class="r">Resultado</th></tr></thead>
+    <tbody>${d.mensual.map(m=>`<tr><td>${m.mes}</td><td class="r">${(m.ing||m.egr)?f(m.ing):'—'}</td><td class="r">${(m.ing||m.egr)?f(m.egr):'—'}</td><td class="r">${(m.ing||m.egr)?f(m.saldo):'—'}</td></tr>`).join('')}
+    <tr class="tot"><td>TOTAL</td><td class="r">${f(d.totalIng)}</td><td class="r">${f(d.totalEgr)}</td><td class="r">${f(d.resultado)}</td></tr></tbody></table>
+    <h2>Estado de cuotas</h2>
+    <table><tbody><tr><td>Recaudado en cuotas</td><td class="r verde">${f(d.cuotasRecaudado)}</td></tr>
+    <tr><td>Deuda de cuotas (vencida)</td><td class="r rojo">${f(d.cuotasDeuda)}</td></tr></tbody></table>
+    <p style="margin-top:24px;color:#999;font-size:11px;">Documento generado por el sistema de tesorería — JAD Soluciones</p>
+    <script>window.onload=function(){window.print();}<\/script>
+    </body></html>`);
+  w.document.close();
+  toast('Abriendo PDF…','success');
+}
+
 function renderResumen() {
   const anio=document.getElementById('res-anio')?.value||new Date().getFullYear().toString();
   const f=anio==='todos'?movimientos:movimientos.filter(m=>(m.fecha||'').startsWith(anio));
@@ -1781,7 +2049,7 @@ function busquedaGlobal(){
 
 // ===== TABS =====
 function showTab(t){
-  ['registro','comprobante','detalle','resumen','grafico','socios','cuotas','banco','accesos','morosidad','config'].forEach(id=>{
+  ['registro','comprobante','detalle','resumen','grafico','socios','cuotas','banco','accesos','morosidad','anual','config'].forEach(id=>{
     document.getElementById('tab-'+id+'-content').style.display=id===t?'block':'none';
     document.getElementById('tab-'+id).classList.toggle('active',id===t);
   });
@@ -1792,6 +2060,7 @@ function showTab(t){
   if(t==='resumen') renderResumen();
   if(t==='accesos') cargarAccesos();
   if(t==='morosidad') cargarMorosidad();
+  if(t==='anual') initAnual();
   if(t==='socios') renderSocios();
   if(t==='cuotas'){
     if(!cuotasCargadas)cargarCuotasAirtable().then(()=>renderCuotas());else renderCuotas();
